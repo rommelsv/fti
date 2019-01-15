@@ -501,7 +501,7 @@ int FTI_HandleCkptRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
 
         // init headInfo
         FTIFF_headInfo *headInfo;
-        headInfo = malloc(FTI_Topo->nbApprocs * sizeof(FTIFF_headInfo));
+        headInfo = FTI_TypeAlloc(FTIFF_headInfo, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbApprocs);
 
         int k;
         for (i = 0; i < FTI_Topo->nbApprocs; i++) { // Iterate on the application processes in the node
@@ -528,7 +528,7 @@ int FTI_HandleCkptRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
             isDcpCnt = 0;
         }
 
-        free(headInfo);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, headInfo);
 
     }
 
@@ -686,7 +686,7 @@ int FTI_WriteMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     MPI_Offset chunkSize = FTI_Exec->ckptSize;
 
     // collect chunksizes of other ranks
-    MPI_Offset* chunkSizes = talloc(MPI_Offset, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
+    MPI_Offset* chunkSizes = FTI_TypeAlloc(MPI_Offset, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
     MPI_Allgather(&chunkSize, 1, MPI_OFFSET, chunkSizes, 1, MPI_OFFSET, FTI_COMM_WORLD);
 
     char gfn[FTI_BUFS], ckptFile[FTI_BUFS];
@@ -720,7 +720,7 @@ int FTI_WriteMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         MPI_Error_string(res, mpi_err, &reslen);
         snprintf(str, FTI_BUFS, "unable to create file [MPI ERROR - %i] %s", res, mpi_err);
         FTI_Print(str, FTI_EROR);
-        free(chunkSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
         return FTI_NSCS;
     }
 
@@ -730,7 +730,7 @@ int FTI_WriteMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     for (i = 0; i < FTI_Topo->splitRank; i++) {
         write_info.offset += chunkSizes[i];
     }
-    free(chunkSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
 
     for (i = 0; i < FTI_Exec->nbVar; i++) {
         // determine the type of data pointer
@@ -791,10 +791,10 @@ int FTI_WriteSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 {
     int numFiles = 1;
     int nlocaltasks = 1;
-    int* file_map = calloc(1, sizeof(int));
-    int* ranks = talloc(int, 1);
-    int* rank_map = talloc(int, 1);
-    sion_int64* chunkSizes = talloc(sion_int64, 1);
+    int* file_map = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, 1);
+    int* ranks = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, 1);
+    int* rank_map = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, 1);
+    sion_int64* chunkSizes = FTI_TypeAlloc(sion_int64, FTI_Exec, AML_MEMORY_SLOW, 1);
     int fsblksize = -1;
     chunkSizes[0] = FTI_Exec->ckptSize;
     ranks[0] = FTI_Topo->splitRank;
@@ -811,10 +811,10 @@ int FTI_WriteSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         errno = 0;
         FTI_Print("SIONlib: File could no be opened", FTI_EROR);
 
-        free(file_map);
-        free(rank_map);
-        free(ranks);
-        free(chunkSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
         return FTI_NSCS;
     }
 
@@ -826,10 +826,10 @@ int FTI_WriteSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         errno = 0;
         FTI_Print("SIONlib: Could not set file pointer", FTI_EROR);
         sion_parclose_mapped_mpi(sid);
-        free(file_map);
-        free(rank_map);
-        free(ranks);
-        free(chunkSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
         return FTI_NSCS;
     }
 
@@ -855,10 +855,10 @@ int FTI_WriteSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
                 errno = 0;
                 FTI_Print("SIONlib: Data could not be written", FTI_EROR);
                 res =  sion_parclose_mapped_mpi(sid);
-                free(file_map);
-                free(rank_map);
-                free(ranks);
-                free(chunkSizes);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
                 return res;
             }
         }
@@ -868,16 +868,16 @@ int FTI_WriteSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     // close parallel file
     if (sion_parclose_mapped_mpi(sid) == -1) {
         FTI_Print("Cannot close sionlib file.", FTI_WARN);
-        free(file_map);
-        free(rank_map);
-        free(ranks);
-        free(chunkSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
         return FTI_NSCS;
     }
-    free(file_map);
-    free(rank_map);
-    free(ranks);
-    free(chunkSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
 
     return FTI_SCES;
 }

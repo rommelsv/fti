@@ -223,7 +223,7 @@ int FTI_Checksum(FTIT_execution* FTI_Exec, FTIT_dataset* FTI_Data,
 #ifdef GPUSUPPORT
     if (FTI_Data[i].isDevicePtr) {
         if (FTI_Conf->ioMode != FTI_IO_FTIFF)
-          FTI_Data[i].ptr = malloc(FTI_Data[i].count * FTI_Data[i].eleSize);
+          FTI_Data[i].ptr = FTI_TypeAlloc(void, FTI_Exec, AML_MEMORY_SLOW, FTI_Data[i].count * FTI_Data[i].eleSize);
 
       if(FTI_Data[i].ptr == NULL){
         FTI_Print("Failed to allocate FTI scratch buffer", FTI_EROR);
@@ -242,7 +242,7 @@ int FTI_Checksum(FTIT_execution* FTI_Exec, FTIT_dataset* FTI_Data,
 #ifdef GPUSUPPORT    
     if (FTI_Data[i].isDevicePtr) {
         if (FTI_Conf->ioMode != FTI_IO_FTIFF){
-          free(FTI_Data[i].ptr);
+          FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Data[i].ptr);
           FTI_Data[i].ptr = NULL;
         }
     }
@@ -362,27 +362,27 @@ void FTI_MallocMeta(FTIT_execution* FTI_Exec, FTIT_topology* FTI_Topo)
   int i;
   if (FTI_Topo->amIaHead) {
     for (i = 0; i < 5; i++) {
-      FTI_Exec->meta[i].exists = calloc(FTI_Topo->nodeSize, sizeof(int));
-      FTI_Exec->meta[i].maxFs = calloc(FTI_Topo->nodeSize, sizeof(long));
-      FTI_Exec->meta[i].fs = calloc(FTI_Topo->nodeSize, sizeof(long));
-      FTI_Exec->meta[i].pfs = calloc(FTI_Topo->nodeSize, sizeof(long));
-      FTI_Exec->meta[i].ckptFile = calloc(FTI_BUFS * FTI_Topo->nodeSize, sizeof(char));
-      FTI_Exec->meta[i].currentL4CkptFile = calloc(FTI_BUFS * FTI_Topo->nodeSize, sizeof(char));
-      FTI_Exec->meta[i].nbVar = calloc(FTI_Topo->nodeSize, sizeof(int));
-      FTI_Exec->meta[i].varID = calloc(FTI_BUFS * FTI_Topo->nodeSize, sizeof(int));
-      FTI_Exec->meta[i].varSize = calloc(FTI_BUFS * FTI_Topo->nodeSize, sizeof(long));
+      FTI_Exec->meta[i].exists = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].maxFs = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].fs = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].pfs = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].ckptFile = FTI_TypeZeroAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS * FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].currentL4CkptFile = FTI_TypeZeroAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS * FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].nbVar = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].varID = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS * FTI_Topo->nodeSize);
+      FTI_Exec->meta[i].varSize = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS * FTI_Topo->nodeSize);
     }
   } else {
     for (i = 0; i < 5; i++) {
-      FTI_Exec->meta[i].exists = calloc(1, sizeof(int));
-      FTI_Exec->meta[i].maxFs = calloc(1, sizeof(long));
-      FTI_Exec->meta[i].fs = calloc(1, sizeof(long));
-      FTI_Exec->meta[i].pfs = calloc(1, sizeof(long));
-      FTI_Exec->meta[i].ckptFile = calloc(FTI_BUFS, sizeof(char));
-      FTI_Exec->meta[i].currentL4CkptFile = calloc(FTI_BUFS, sizeof(char));
-      FTI_Exec->meta[i].nbVar = calloc(1, sizeof(int));
-      FTI_Exec->meta[i].varID = calloc(FTI_BUFS, sizeof(int));
-      FTI_Exec->meta[i].varSize = calloc(FTI_BUFS, sizeof(long));
+      FTI_Exec->meta[i].exists = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, 1);
+      FTI_Exec->meta[i].maxFs = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, 1);
+      FTI_Exec->meta[i].fs = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, 1);
+      FTI_Exec->meta[i].pfs = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, 1);
+      FTI_Exec->meta[i].ckptFile = FTI_TypeZeroAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS );
+      FTI_Exec->meta[i].currentL4CkptFile = FTI_TypeZeroAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS );
+      FTI_Exec->meta[i].nbVar = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS);
+      FTI_Exec->meta[i].varID = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS );
+		FTI_Exec->meta[i].varSize = FTI_TypeZeroAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS);
     }
   }
   FTI_Exec->metaAlloc = 1;
@@ -402,14 +402,14 @@ void FTI_FreeMeta(FTIT_execution* FTI_Exec)
   if (FTI_Exec->metaAlloc == 1) {
     int i;
     for (i = 0; i < 5; i++) {
-      free(FTI_Exec->meta[i].exists);
-      free(FTI_Exec->meta[i].maxFs);
-      free(FTI_Exec->meta[i].fs);
-      free(FTI_Exec->meta[i].pfs);
-      free(FTI_Exec->meta[i].ckptFile);
-      free(FTI_Exec->meta[i].nbVar);
-      free(FTI_Exec->meta[i].varID);
-      free(FTI_Exec->meta[i].varSize);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].exists);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].maxFs);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].fs);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].pfs);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].ckptFile);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].nbVar);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].varID);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->meta[i].varSize);
     }
     FTI_Exec->metaAlloc = 0;
   }
@@ -427,17 +427,17 @@ void FTI_FreeMeta(FTIT_execution* FTI_Exec)
 /*-------------------------------------------------------------------------*/
 int FTI_InitGroupsAndTypes(FTIT_execution* FTI_Exec) 
 {
-  FTI_Exec->FTI_Type = malloc(sizeof(FTIT_type*) * FTI_BUFS);
+  FTI_Exec->FTI_Type = FTI_Alloc(FTI_Exec, AML_MEMORY_SLOW,  sizeof(FTIT_type *) * FTI_BUFS);
   if (FTI_Exec->FTI_Type == NULL) {
     return FTI_NSCS;
   }
 
-  FTI_Exec->H5groups = malloc(sizeof(FTIT_H5Group*) * FTI_BUFS);
+  FTI_Exec->H5groups = FTI_TypeAlloc(FTIT_H5Group*, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS);
   if (FTI_Exec->H5groups == NULL) {
     return FTI_NSCS;
   }
 
-  FTI_Exec->H5groups[0] = malloc(sizeof(FTIT_H5Group));
+  FTI_Exec->H5groups[0] = FTI_TypeAlloc(FTIT_H5Group, FTI_Exec, AML_MEMORY_SLOW, 1);
   if (FTI_Exec->H5groups[0] == NULL) {
     return FTI_NSCS;
   }
@@ -464,15 +464,15 @@ void FTI_FreeTypesAndGroups(FTIT_execution* FTI_Exec)
   for (i = 0; i < FTI_Exec->nbType; i++) {
     if (FTI_Exec->FTI_Type[i]->structure != NULL) {
       //if complex type and have structure
-      free(FTI_Exec->FTI_Type[i]->structure);
+      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->FTI_Type[i]->structure);
     }
-    free(FTI_Exec->FTI_Type[i]);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->FTI_Type[i]);
   }
-  free(FTI_Exec->FTI_Type);
+  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->FTI_Type);
   for (i = 0; i < FTI_Exec->nbGroup; i++) {
-    free(FTI_Exec->H5groups[i]);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->H5groups[i]);
   }
-  free(FTI_Exec->H5groups);
+  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->H5groups);
 }
 
 #ifdef ENABLE_HDF5
@@ -689,6 +689,260 @@ void FTI_CloseGroup(FTIT_H5Group* ftiGroup, FTIT_H5Group** FTI_Group)
   ftiGroup->h5groupID = -1;
 }
 #endif
+
+
+/* TODO-rsv: probably a good idea is to keep a dictionary about the pointer
+ * and its corresponding binding, so that in free or realloc there could not 
+ * be possibility for a mismatch 
+ */
+
+void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t size) {
+
+    void *allocated_ptr ;
+    char debug_string[128];
+
+		snprintf(debug_string, 128, "About to alocate %ld B into %s", 
+			(uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
+
+		FTI_Print(debug_string, FTI_WARN);
+
+    switch (placement) {
+#ifdef _USE_AML
+        case AML_MEMORY_FAST : 
+            allocated_ptr = aml_area_malloc(&FTI_Exec->area_fast, size );
+            break;
+        case AML_MEMORY_SLOW: 
+            allocated_ptr = aml_area_malloc (&FTI_Exec->area_slow, size);
+            break;
+#endif
+        case FTI_PLACEMENT_DEFAULT: 
+        default:
+            allocated_ptr = malloc ( size ) ;
+            break;
+    }
+
+    /* TODO-rsv: post processing and check forthe pointer sanity */
+
+	assert(allocated_ptr!=NULL);
+	
+	snprintf(debug_string, 128, "Pointer Allocated %p", allocated_ptr);
+	FTI_Print(debug_string, FTI_WARN);
+
+
+    return allocated_ptr;
+}
+
+
+void *FTI_RealZeroAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t many, uint64_t size) {
+
+   void *allocated_ptr ;
+	
+	char debug_string[128];
+
+	snprintf(debug_string, 128, "About to zero allocate %ld B into %s", 
+					(uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
+
+	FTI_Print(debug_string, FTI_WARN);
+
+    switch (placement) {
+#ifdef _USE_AML
+        case AML_MEMORY_FAST : 
+            allocated_ptr = aml_area_calloc( &FTI_Exec->area_fast, many, size );
+            break;
+        case AML_MEMORY_SLOW: 
+            allocated_ptr = aml_area_calloc (&FTI_Exec->area_slow, many, size);
+            break;
+#endif
+        case FTI_PLACEMENT_DEFAULT:
+        default:
+            allocated_ptr = calloc (many, size);
+            break;
+
+    }
+
+    /* TODO-rsv: post processing and check forthe pointer sanity */
+
+	assert(allocated_ptr != NULL);
+	snprintf(debug_string, 128, "Pointer Allocated %p", allocated_ptr);
+	FTI_Print(debug_string, FTI_WARN);
+    return allocated_ptr;
+}
+
+void *FTI_RealReAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, void * pointer, size_t size) {
+
+    void *allocated_ptr ;
+
+		char debug_string[128];
+
+		snprintf(debug_string, 128, "About to  realloc %p of %ld B into %s", 
+				pointer, (uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
+
+		FTI_Print(debug_string, FTI_WARN);
+
+    switch (placement) {
+#ifdef _USE_AML
+        case AML_MEMORY_FAST : 
+            allocated_ptr = aml_area_realloc( &FTI_Exec->area_fast, pointer, size );
+            break;
+        case AML_MEMORY_SLOW: 
+            allocated_ptr = aml_area_realloc( &FTI_Exec->area_slow, pointer, size);
+               break;
+#endif
+        case FTI_PLACEMENT_DEFAULT:
+        default:
+            allocated_ptr = realloc ( pointer, size);
+            break;
+    }
+
+    /* TODO-rsv: post processing and check forthe pointer sanity */
+
+	assert(allocated_ptr != NULL);
+
+	snprintf(debug_string, 128, "Pointer ReAllocated %p", allocated_ptr);
+	FTI_Print(debug_string, FTI_WARN);
+	return allocated_ptr;
+
+}
+
+void FTI_RealFree(FTIT_execution* FTI_Exec, FTIT_Placement placement, void *pointer){
+
+	char debug_string[128];
+
+	snprintf(debug_string, 128, "About to Free %p from %s", 
+		pointer, placement==AML_MEMORY_FAST? "fast": "slow");
+
+	FTI_Print(debug_string, FTI_WARN);
+
+    switch (placement) {
+#ifdef _USE_AML
+        case AML_MEMORY_FAST : 
+            aml_area_free( &FTI_Exec->area_fast, pointer );
+            break;
+        case AML_MEMORY_SLOW: 
+            aml_area_free( &FTI_Exec->area_slow, pointer );
+            break;
+#endif
+        case FTI_PLACEMENT_DEFAULT:
+        default:
+            free( pointer );
+            break;
+    }
+
+    /* TODO-rsv: post processing and check forthe pointer sanity */
+}
+  
+
+#ifdef _USE_AML
+
+/*-------------------------------------------------------------------------*/
+/**
+  @brief      Init AML jemalloc variables
+  @param			FTI_Exec - Runtime variables
+  @param			FTI_Conf - Up to the moment holding numaNodes hardcoded. 
+
+  @return     integer         FTI_SCES if successful.
+  @return 		integer					FTI_FAIL if dont.
+
+  Idea is to interface with a different kind of memory and use it as a bckup
+
+ **/
+int FTI_AMLInit(FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf,   
+		struct aml_arena *FTI_ArenaFast, struct aml_arena *FTI_ArenaSlow ){
+
+	/* rsv-TODO: up to the moment aml_init is not binded to anything, 
+		henceforth, we can skipp it but need to get better interface. 
+		this is only for knowing that FTI could use AML within 
+	*/
+	/* aml_init();*/
+
+	/* rsv-TODO check on Topos about the NUMA Tree */
+
+	char numanode[NUMA_NODE_STRING];
+
+	memset(numanode, 0, NUMA_NODE_STRING);
+	snprintf(numanode, 4, "%d", FTI_Conf->numanodeFast);
+
+	FTI_Exec->slow_bitmask = numa_parse_nodestring_all(numanode);
+
+	memset(numanode, 0, NUMA_NODE_STRING);
+	snprintf(numanode, 4, "%d", FTI_Conf->numanodeSlow);
+
+   FTI_Exec->area_fast.ops = &aml_area_linux_ops;
+	FTI_Exec->area_fast.data =  (struct aml_area_data *)&FTI_Exec->area_fast_inner_data  ;
+
+   FTI_Exec->area_slow.ops = &aml_area_linux_ops;
+	FTI_Exec->area_slow.data =  (struct aml_area_data *)&FTI_Exec->area_slow_inner_data  ;
+
+	FTI_Exec->fast_bitmask = numa_parse_nodestring_all(numanode);
+
+	/* rsv-TODO check on error types */
+	/* rsv-TODO rewrite assert, support on FTI_TRY()?*/
+	
+assert(
+	!aml_arena_jemalloc_init(
+		FTI_ArenaSlow,
+		AML_ARENA_JEMALLOC_TYPE_REGULAR));	
+
+assert(
+	!aml_area_linux_init(
+		&FTI_Exec->area_slow,
+		AML_AREA_LINUX_MANAGER_TYPE_SINGLE, 
+		AML_AREA_LINUX_MBIND_TYPE_REGULAR,	
+		AML_AREA_LINUX_MMAP_TYPE_ANONYMOUS, 
+		FTI_ArenaSlow, MPOL_BIND, &FTI_Exec->slow_bitmask));
+
+
+assert(
+	!aml_arena_jemalloc_init(
+		FTI_ArenaFast,
+		AML_ARENA_JEMALLOC_TYPE_REGULAR));	
+
+assert(
+	!aml_area_linux_init(
+		&FTI_Exec->area_fast,	
+		AML_AREA_LINUX_MANAGER_TYPE_SINGLE, 
+		AML_AREA_LINUX_MBIND_TYPE_REGULAR,	
+		AML_AREA_LINUX_MMAP_TYPE_ANONYMOUS, 
+		FTI_ArenaFast, MPOL_BIND, &FTI_Exec->fast_bitmask));
+
+
+	return FTI_SCES;
+
+}
+
+/*-------------------------------------------------------------------------*/
+/**
+  @brief      If aml is used then bind to the usable *fast memory* 
+  @param      FTI_Data        DataSet  global pointer
+  @return     integer         FTI_SCES if successful.
+										FTI_FAIL if dont.
+
+  Idea is to interface with a different kind of memory and use it as a bckup
+
+ **/
+/*-------------------------------------------------------------------------*/
+int FTI_BindSpecifics( FTIT_dataset **FTI_Data,  struct aml_area *FTI_AreaFast )
+//FTIT_execution *FTI_Exec )
+{
+    int i;
+	 FTIT_dataset *ptr = NULL;
+
+	/* rsv-TODO: FAST */
+	 ptr = aml_area_malloc(FTI_AreaFast, 
+				FTI_BUFS * sizeof(FTIT_dataset) );
+	
+	/* rsv-TODO check on error status */
+
+    for (i = 0; i < FTI_BUFS; i++) {
+        ptr[i].id = -1;
+    }
+
+	*FTI_Data = ptr;
+	
+   return FTI_SCES;
+}
+
+#endif 
 
 /*-------------------------------------------------------------------------*/
 /**

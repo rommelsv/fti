@@ -145,7 +145,7 @@ int FTI_InitStage( FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf, FTIT_
 
     // allocate nbApproc instances of Stage info for heads but only one for application processes
     int num = ( FTI_Topo->amIaHead ) ? FTI_Topo->nbApprocs : 1;
-    FTI_Exec->stageInfo = calloc( num, sizeof(FTIT_StageInfo) );
+    FTI_Exec->stageInfo = FTI_TypeZeroAlloc(FTIT_StageInfo, FTI_Exec, AML_MEMORY_SLOW,  num );
     if ( FTI_Exec->stageInfo == NULL ) {
         FTI_DISABLE_STAGING;
         FTI_Print( "Failed to allocate memory for 'FTI_Exec->stageInfo'", FTI_EROR );
@@ -156,11 +156,11 @@ int FTI_InitStage( FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf, FTIT_
     if ( FTI_Topo->amIaHead ) {
         idxRequest = NULL;
     } else {
-        idxRequest = calloc( 1, arr_size );
+        idxRequest =  FTI_TypeZeroAlloc( uint32_t, FTI_Exec, AML_MEMORY_SLOW, FTI_SI_MAX_NUM );
         if ( idxRequest == NULL ) {
             FTI_DISABLE_STAGING;
             FTI_Print( "Failed to allocate memory for 'idxRequest'", FTI_EROR );
-            free( FTI_Exec->stageInfo );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW,  FTI_Exec->stageInfo );
             return FTI_NSCS;
         }
     }
@@ -186,8 +186,8 @@ int FTI_InitStage( FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf, FTIT_
         snprintf(str, FTI_BUFS, "Wrong size (%d != %d) of node communicator, disable staging!", size, FTI_Topo->nodeSize );
         FTI_Print(str, FTI_WARN );
         MPI_Comm_free( &FTI_Exec->nodeComm );
-        free( FTI_Exec->stageInfo );
-        free( idxRequest );
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW,  FTI_Exec->stageInfo );
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, idxRequest );
         return FTI_NSCS;
     }
 
@@ -222,8 +222,8 @@ int FTI_InitStage( FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf, FTIT_
             FTI_DISABLE_STAGING;
             MPI_Win_free( &stageWin );
             MPI_Comm_free( &FTI_Exec->nodeComm );
-            free( FTI_Exec->stageInfo );
-            free( idxRequest );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW,  FTI_Exec->stageInfo );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, idxRequest );
             FTI_Print("Cannot create stage directory", FTI_EROR);
         }
     }
@@ -254,7 +254,7 @@ void FTI_FinalizeStage( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, FTIT_
         for( ; i<FTI_Topo->nbApprocs; ++i ) {
             int nbRequest = FTI_Exec->stageInfo[i].nbRequest; 
             if ( nbRequest ) {
-                free( FTI_Exec->stageInfo[i].request );
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->stageInfo[i].request );
             }
         }
 
@@ -265,9 +265,9 @@ void FTI_FinalizeStage( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, FTIT_
         if ( nbRequest ) {
             int i = 0;
             for ( ; i<nbRequest; ++i ) {
-                free( ptr[i].sendBuf );
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW,  ptr[i].sendBuf );
             }
-            free( ptr );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ptr );
         }
 
     }
@@ -281,12 +281,12 @@ void FTI_FinalizeStage( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, FTIT_
     // ensure that before removing local directory, all staging files
     // are removed.
     MPI_Barrier( FTI_Exec->globalComm );
-    
+
     // free stage info
-    free( FTI_Exec->stageInfo );
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->stageInfo );
 
     // free idxRequest field array
-    free( idxRequest );
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW,  idxRequest );
    
     // free window 
     // NOTE: this also releases the ressources for the status field array
@@ -332,7 +332,8 @@ int FTI_InitStageRequestApp( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, 
         return FTI_NSCS;
     }
 
-    void *ptr = realloc( FTI_Exec->stageInfo->request, sizeof(FTIT_StageAppInfo) * (FTI_Exec->stageInfo->nbRequest+1) );
+    void *ptr = FTI_ReAlloc(FTI_Exec, AML_MEMORY_SLOW,  FTI_Exec->stageInfo->request, 
+						sizeof(FTIT_StageAppInfo) * (FTI_Exec->stageInfo->nbRequest+1) );
     if( ptr == NULL ) {
         FTI_Print( "failed to allocate memory for 'FTI_Exec->stageInfo->request'", FTI_EROR );
         return FTI_NSCS;
@@ -383,7 +384,7 @@ int FTI_InitStageRequestHead( char* lpath, char *rpath, FTIT_execution *FTI_Exec
         return FTI_NSCS;
     }
     
-    void *ptr = realloc( FTI_Exec->stageInfo[source-1].request, sizeof(FTIT_StageHeadInfo) * (FTI_Exec->stageInfo[source-1].nbRequest+1) );
+    void *ptr = FTI_ReAlloc(FTI_Exec, AML_MEMORY_SLOW , FTI_Exec->stageInfo[source-1].request, sizeof(FTIT_StageHeadInfo) * (FTI_Exec->stageInfo[source-1].nbRequest+1) );
     if( ptr == NULL ) {
         FTI_Print( "failed to allocate memory", FTI_EROR );
         return FTI_NSCS;
@@ -443,12 +444,12 @@ int FTI_FreeStageRequest( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int
         // if last element in array, we just need to truncate the array.
         if ( idx == (FTI_Exec->stageInfo->nbRequest-1) ) {
             void *buf_ptr = ptr[idx].sendBuf;
-            ptr = realloc( ptr, type_size * (FTI_Exec->stageInfo->nbRequest-1) );
+            ptr = FTI_ReAlloc(FTI_Exec, AML_MEMORY_SLOW, ptr, type_size * (FTI_Exec->stageInfo->nbRequest-1))  ;
             if ( (ptr == NULL) && (FTI_Exec->stageInfo->nbRequest > 1) ) {
                 FTI_Print( "failed to allocate memory for 'ptr' in 'FTI_FreeStageRequest'", FTI_EROR );
                 return FTI_NSCS;
             }
-            free( buf_ptr );
+            FTI_Free( FTI_Exec, AML_MEMORY_SLOW, buf_ptr );
             --FTI_Exec->stageInfo->nbRequest;
             FTI_Exec->stageInfo->request = (FTI_Exec->stageInfo->nbRequest == 0) ? NULL : (void*)ptr;
         } 
@@ -456,7 +457,7 @@ int FTI_FreeStageRequest( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int
         else {
             void *buf_ptr = ptr[idx].sendBuf;
             void *dest = &ptr[idx];
-            void *dest_cpy = malloc( type_size );
+            void *dest_cpy = FTI_TypeAlloc(FTIT_StageAppInfo, FTI_Exec, AML_MEMORY_SLOW, 1 );
             if ( dest_cpy == NULL ) {
                 FTI_Print( "failed to allocate memory for 'dest_cpy' in 'FTI_FreeStageRequest'", FTI_EROR );
                 return FTI_NSCS;
@@ -465,16 +466,16 @@ int FTI_FreeStageRequest( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int
             void *src = &ptr[idx+1];
             size_t mem_size = (FTI_Exec->stageInfo->nbRequest - (idx+1)) * type_size; 
             memmove( dest, src, mem_size );
-            ptr = realloc( ptr, type_size * (FTI_Exec->stageInfo->nbRequest-1) );
+            ptr = FTI_ReAlloc(FTI_Exec, AML_MEMORY_SLOW,  ptr, sizeof(FTIT_StageAppInfo)*( FTI_Exec->stageInfo->nbRequest-1) );
             if ( ptr == NULL ) {
                 FTI_Print( "failed to allocate memory for 'ptr' in 'FTI_FreeStageRequest'", FTI_EROR );
                 memmove( src, dest, mem_size );
                 memcpy( dest, dest_cpy, type_size );
-                free( dest_cpy);
+                FTI_Free( FTI_Exec, AML_MEMORY_SLOW, dest_cpy);
                 return FTI_NSCS;
             }
-            free( buf_ptr );
-            free( dest_cpy );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buf_ptr );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dest_cpy );
             FTI_Exec->stageInfo->request = (void*)ptr;
             --FTI_Exec->stageInfo->nbRequest;
             // re-assign the correct values
@@ -507,7 +508,7 @@ int FTI_FreeStageRequest( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int
         
         // if last element in array, we just need to truncate the array.
         if ( idx == (nbRequest-1) ) {
-            ptr = realloc( ptr, type_size * (nbRequest-1) );
+            ptr = FTI_ReAlloc(FTI_Exec, AML_MEMORY_SLOW,  ptr, sizeof(FTIT_StageHeadInfo)*(nbRequest-1) );
             if ( (ptr == NULL) && (nbRequest > 1) ) {
                 FTI_Print( "failed to allocate memory for 'ptr' in 'FTI_FreeStageRequest'", FTI_EROR );
                 return FTI_NSCS;
@@ -519,7 +520,7 @@ int FTI_FreeStageRequest( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int
         // if not last element, we need to truncate array and move elements (before truncation)
         else {
             void *dest = &(ptr[idx]);
-            void *dest_cpy = malloc( type_size );
+            void *dest_cpy = FTI_Alloc(FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIT_StageHeadInfo));
             if ( dest_cpy == NULL ) {
                 FTI_Print( "failed to allocate memory for 'dest_cpy' in 'FTI_FreeStageRequest'", FTI_EROR );
                 return FTI_NSCS;
@@ -528,15 +529,15 @@ int FTI_FreeStageRequest( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int
             void *src = &(ptr[idx+1]);
             size_t mem_size = (nbRequest - (idx+1)) * type_size; 
             memmove( dest, src, mem_size );
-            ptr = realloc( ptr, type_size * (nbRequest-1) );
+            ptr = FTI_ReAlloc( FTI_Exec, AML_MEMORY_SLOW,  ptr, sizeof(FTIT_StageHeadInfo) * (nbRequest-1) );
             if ( ptr == NULL ) {
                 FTI_Print( "failed to allocate memory for 'ptr' in 'FTI_FreeStageRequest'", FTI_EROR );
                 memmove( src, dest, mem_size );
                 memcpy( dest, dest_cpy, type_size );
-                free( dest_cpy);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dest_cpy);
                 return FTI_NSCS;
             }
-            free( dest_cpy);
+            FTI_Free( FTI_Exec, AML_MEMORY_SLOW, dest_cpy);
             FTI_Exec->stageInfo[source-1].request = ptr;
             --FTI_Exec->stageInfo[source-1].nbRequest;
         }
@@ -674,7 +675,7 @@ int FTI_SyncStage( char* lpath, char *rpath, FTIT_execution *FTI_Exec,
         return FTI_NSCS;
     }
     // allocate buffer
-    char *buf = (char*) malloc( bs );
+    char *buf = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW,  bs );
 
     // move file to destination
     off_t pos = 0;
@@ -687,7 +688,7 @@ int FTI_SyncStage( char* lpath, char *rpath, FTIT_execution *FTI_Exec,
             snprintf( errstr, FTI_BUFS, "unable to seek in '%s'.", lpath );
             FTI_Print( errstr, FTI_EROR );
             errno = 0;
-            free( buf );
+            FTI_Free( FTI_Exec, AML_MEMORY_SLOW, buf );
             close( fd_local );
             close( fd_global );
             return FTI_NSCS;
@@ -697,7 +698,7 @@ int FTI_SyncStage( char* lpath, char *rpath, FTIT_execution *FTI_Exec,
             snprintf( errstr, FTI_BUFS, "unable to read from '%s'.", lpath );
             FTI_Print( errstr, FTI_EROR );
             errno = 0;
-            free( buf );
+            FTI_Free( FTI_Exec, AML_MEMORY_SLOW, buf );
             close( fd_local );
             close( fd_global );
             return FTI_NSCS;
@@ -707,7 +708,7 @@ int FTI_SyncStage( char* lpath, char *rpath, FTIT_execution *FTI_Exec,
             snprintf( errstr, FTI_BUFS, "unable to write to '%s'.", rpath );
             FTI_Print( errstr, FTI_EROR );
             errno = 0;
-            free( buf );
+            FTI_Free( FTI_Exec, AML_MEMORY_SLOW, buf );
             close( fd_local );
             close( fd_global );
             return FTI_NSCS;
@@ -716,7 +717,7 @@ int FTI_SyncStage( char* lpath, char *rpath, FTIT_execution *FTI_Exec,
     }
 
     // deallocate buffer and close file descriptors
-    free( buf );
+    FTI_Free( FTI_Exec, AML_MEMORY_SLOW, buf );
     close( fd_local );
     fsync( fd_global );
     close( fd_global );
@@ -760,7 +761,7 @@ int FTI_AsyncStage( char *lpath, char *rpath, FTIT_configuration *FTI_Conf,
 
     int idx = FTI_GetRequestField( ID, FTI_SIF_IDX );
     // serialize request before sending to the head
-    void *buf_ser = malloc ( 2*FTI_BUFS + sizeof(int) );
+    void *buf_ser = FTI_Alloc ( FTI_Exec, AML_MEMORY_SLOW, 2*FTI_BUFS + sizeof(int) );
     if ( buf_ser == NULL ) {
         FTI_Print("failed to allocate memory for 'buf_ser' in FTI_AsyncStage'", FTI_EROR );
         return FTI_NSCS;
@@ -807,7 +808,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
     char errstr[FTI_BUFS];
  
     size_t buf_ser_size = 2*FTI_BUFS + sizeof(int);
-    void *buf_ser = malloc ( buf_ser_size );
+    void *buf_ser = FTI_Alloc (FTI_Exec, AML_MEMORY_SLOW,  buf_ser_size );
     if ( buf_ser == NULL ) {
         FTI_Print( "failed to allocate memory for 'buf_ser' in FTI_HandleStageRequest", FTI_EROR );
         return FTI_NSCS; 
@@ -825,7 +826,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
     rpath[FTI_BUFS-1] = '\0';
     int ID = *(int*)(buf_ser+2*FTI_BUFS);
     
-    free( buf_ser );
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buf_ser );
     
     // init Head staging meta data
     if ( FTI_InitStageRequestHead( lpath, rpath, FTI_Exec, FTI_Topo, source, ID ) != FTI_SCES ) {
@@ -921,7 +922,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
         return FTI_NSCS;
     }
     // allocate buffer
-    char *buf = (char*) malloc( bs );
+    char *buf = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW,  bs );
     if ( buf == NULL ) {
         close ( fd_local );
         close ( fd_global );
@@ -944,7 +945,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
             snprintf( errstr, FTI_BUFS, "unable to seek in '%s'.", lpath );
             FTI_Print( errstr, FTI_EROR );
             errno = 0;
-            free( buf );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buf );
             close( fd_local );
             close( fd_global );
             return FTI_NSCS;
@@ -955,7 +956,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
             snprintf( errstr, FTI_BUFS, "unable to read from '%s'.", lpath );
             FTI_Print( errstr, FTI_EROR );
             errno = 0;
-            free( buf );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buf );
             close( fd_local );
             close( fd_global );
             return FTI_NSCS;
@@ -966,7 +967,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
             snprintf( errstr, FTI_BUFS, "unable to write to '%s'.", rpath );
             FTI_Print( errstr, FTI_EROR );
             errno = 0;
-            free( buf );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buf );
             close( fd_local );
             close( fd_global );
             return FTI_NSCS;
@@ -975,7 +976,7 @@ int FTI_HandleStageRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exe
     }
 
     // deallocate buffer and close file descriptors
-    free( buf );
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buf );
     close( fd_local );
     fsync( fd_global );
     close( fd_global );

@@ -133,12 +133,12 @@ int FTI_WriteRSedChecksum(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
     int rankInGroup = node - (sectorID * FTI_Topo->groupSize);
     int groupID = rank % FTI_Topo->nodeSize;
 
-    char* checksums = talloc(char, FTI_Topo->groupSize * MD5_DIGEST_STRING_LENGTH);
+    char* checksums = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->groupSize * MD5_DIGEST_STRING_LENGTH);
     MPI_Allgather(checksum, MD5_DIGEST_STRING_LENGTH, MPI_CHAR, checksums, MD5_DIGEST_STRING_LENGTH, MPI_CHAR, FTI_Exec->groupComm);
 
     //Only first process in group save RS checksum
     if (rankInGroup) {
-        free(checksums);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, checksums);
         return FTI_SCES;
     }
 
@@ -146,7 +146,7 @@ int FTI_WriteRSedChecksum(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
     dictionary* ini = iniparser_load(fileName);
     if (ini == NULL) {
         FTI_Print("Temporary metadata file could NOT be parsed", FTI_WARN);
-        free(checksums);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, checksums);
         return FTI_NSCS;
     }
     // Add metadata to dictionary
@@ -157,7 +157,7 @@ int FTI_WriteRSedChecksum(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
         snprintf(str, FTI_BUFS, "%d:RSed_checksum", i);
         iniparser_set(ini, str, buf);
     }
-    free(checksums);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, checksums);
 
     snprintf(str, FTI_BUFS, "Recreating metadata file (%s)...", fileName);
     FTI_Print(str, FTI_DBUG);
@@ -827,7 +827,7 @@ int FTI_CreateMetadata(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
     char* ckptFileNames;
     if (FTI_Topo->groupRank == 0) {
-        ckptFileNames = talloc(char, FTI_Topo->groupSize * FTI_BUFS);
+        ckptFileNames = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->groupSize * FTI_BUFS);
     }
     strncpy(str, FTI_Exec->meta[0].ckptFile, FTI_BUFS); // Gather all the file names
     MPI_Gather(str, FTI_BUFS, MPI_CHAR, ckptFileNames, FTI_BUFS, MPI_CHAR, 0, FTI_Exec->groupComm);
@@ -844,7 +844,7 @@ int FTI_CreateMetadata(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
     char* checksums;
     if (FTI_Topo->groupRank == 0) {
-        checksums = talloc(char, FTI_Topo->groupSize * MD5_DIGEST_STRING_LENGTH);
+        checksums = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->groupSize * MD5_DIGEST_STRING_LENGTH);
     }
     MPI_Gather(checksum, MD5_DIGEST_STRING_LENGTH, MPI_CHAR, checksums, MD5_DIGEST_STRING_LENGTH, MPI_CHAR, 0, FTI_Exec->groupComm);
 
@@ -854,11 +854,11 @@ int FTI_CreateMetadata(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     int* allVarIDs;
     long* allVarSizes;
     if (FTI_Topo->groupRank == 0) {
-        allVarIDs = talloc(int, FTI_Topo->groupSize * FTI_Exec->nbVar);
-        allVarSizes = talloc(long, FTI_Topo->groupSize * FTI_Exec->nbVar);
+        allVarIDs = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->groupSize * FTI_Exec->nbVar);
+        allVarSizes = FTI_TypeAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->groupSize * FTI_Exec->nbVar);
     }
-    int* myVarIDs = talloc(int, FTI_Exec->nbVar);
-    long* myVarSizes = talloc(long, FTI_Exec->nbVar);
+    int* myVarIDs = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->nbVar);
+    long* myVarSizes = FTI_TypeAlloc(long, FTI_Exec, AML_MEMORY_SLOW, FTI_Exec->nbVar);
     for (i = 0; i < FTI_Exec->nbVar; i++) {
         myVarIDs[i] = FTI_Data[i].id;
         myVarSizes[i] =  FTI_Data[i].size;
@@ -868,16 +868,16 @@ int FTI_CreateMetadata(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     //Gather variables sizes
     MPI_Gather(myVarSizes, FTI_Exec->nbVar, MPI_LONG, allVarSizes, FTI_Exec->nbVar, MPI_LONG, 0, FTI_Exec->groupComm);
 
-    free(myVarIDs);
-    free(myVarSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myVarIDs);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myVarSizes);
 
     if (FTI_Topo->groupRank == 0) { // Only one process in the group create the metadata
         int res = FTI_Try(FTI_WriteMetadata(FTI_Conf, FTI_Exec, FTI_Topo, fileSizes, mfs,
                     ckptFileNames, checksums, allVarIDs, allVarSizes), "write the metadata.");
-        free(allVarIDs);
-        free(allVarSizes);
-        free(ckptFileNames);
-        free(checksums);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allVarIDs);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allVarSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ckptFileNames);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, checksums);
         if (res == FTI_NSCS) {
             return FTI_NSCS;
         }
@@ -888,7 +888,6 @@ int FTI_CreateMetadata(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     FTI_Exec->meta[FTI_Exec->ckptLvel].pfs[0] = FTI_Exec->meta[0].pfs[0];
     FTI_Exec->meta[FTI_Exec->ckptLvel].maxFs[0] = FTI_Exec->meta[0].maxFs[0];
     FTI_Exec->meta[FTI_Exec->ckptLvel].nbVar[0] = FTI_Exec->meta[0].nbVar[0];
-    strncpy(FTI_Exec->meta[FTI_Exec->ckptLvel].ckptFile, FTI_Exec->meta[0].ckptFile, FTI_BUFS);
     for (i = 0; i < FTI_Exec->nbVar; i++) {
         FTI_Exec->meta[0].varID[i] = FTI_Data[i].id;
         FTI_Exec->meta[0].varSize[i] = FTI_Data[i].size;
@@ -896,5 +895,6 @@ int FTI_CreateMetadata(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         FTI_Exec->meta[FTI_Exec->ckptLvel].varSize[i] = FTI_Data[i].size;
     }
 
-    return FTI_SCES;
+	FTI_Print("Saliendo de CreateMetaData", FTI_WARN);
+   return FTI_SCES;
 }

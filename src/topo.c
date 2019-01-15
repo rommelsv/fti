@@ -126,12 +126,12 @@ int FTI_SaveTopo(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo, char* na
 
  **/
 /*-------------------------------------------------------------------------*/
-int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
-        int* nodeList, char* nameList)
+int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, 
+		FTIT_topology* FTI_Topo, int* nodeList, char* nameList)
 {
-    int* nl = talloc(int, FTI_Topo->nbProc);
-    int* old = talloc(int, FTI_Topo->nbNodes);
-    int* new = talloc(int, FTI_Topo->nbNodes);
+    int* nl = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbProc);
+    int* old = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbNodes);
+    int* new = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbNodes);
     int i;
     for (i = 0; i < FTI_Topo->nbNodes; i++) {
         old[i] = -1;
@@ -147,9 +147,9 @@ int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
     if (access(mfn, F_OK) != 0) {
         FTI_Print("The topology file is NOT accessible.", FTI_WARN);
 
-        free(nl);
-        free(old);
-        free(new);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nl);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, old);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, new);
 
         return FTI_NSCS;
     }
@@ -159,9 +159,9 @@ int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
     if (ini == NULL) {
         FTI_Print("Iniparser could NOT parse the topology file.", FTI_WARN);
 
-        free(nl);
-        free(old);
-        free(new);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nl);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, old);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, new);
 
         return FTI_NSCS;
     }
@@ -213,9 +213,9 @@ int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
     }
 
     // Free memory
-    free(nl);
-    free(old);
-    free(new);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nl);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, old);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, new);
 
     return FTI_SCES;
 }
@@ -239,7 +239,8 @@ int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
 int FTI_BuildNodeList(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         FTIT_topology* FTI_Topo, int* nodeList, char* nameList)
 {
-    char* lhn = talloc(char, FTI_BUFS* FTI_Topo->nbProc);
+    char* lhn = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS* FTI_Topo->nbProc);
+
     memset(lhn + (FTI_Topo->myRank * FTI_BUFS), 0, FTI_BUFS); // To get local hostname
     if (!FTI_Conf->test) {
         gethostname(lhn + (FTI_Topo->myRank * FTI_BUFS), FTI_BUFS); // NOT local test
@@ -247,6 +248,7 @@ int FTI_BuildNodeList(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     else {
         snprintf(lhn + (FTI_Topo->myRank * FTI_BUFS), FTI_BUFS, "node%d", FTI_Topo->myRank / FTI_Topo->nodeSize); // Local
     }
+
     char hname[FTI_BUFS];
     strncpy(hname, lhn + (FTI_Topo->myRank * FTI_BUFS), FTI_BUFS - 1); // Distributing host names
     MPI_Allgather(hname, FTI_BUFS, MPI_CHAR, lhn, FTI_BUFS, MPI_CHAR, FTI_Exec->globalComm);
@@ -288,12 +290,12 @@ int FTI_BuildNodeList(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             char str[FTI_BUFS];
             snprintf(str, FTI_BUFS, "Node %d has no %d processes", i / FTI_Topo->nodeSize, FTI_Topo->nodeSize);
             FTI_Print(str, FTI_WARN);
-            free(lhn);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, lhn);
             return FTI_NSCS;
         }
     }
 
-    free(lhn);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, lhn);
 
     return FTI_SCES;
 }
@@ -376,9 +378,9 @@ int FTI_CreateComms(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 int FTI_Topology(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         FTIT_topology* FTI_Topo)
 {
-    char *nameList = talloc(char, FTI_Topo->nbNodes *FTI_BUFS);
+    char *nameList = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbNodes *FTI_BUFS);
 
-    int* nodeList = talloc(int, FTI_Topo->nbNodes* FTI_Topo->nodeSize);
+    int* nodeList = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbNodes* FTI_Topo->nodeSize);
     int i;
     for (i = 0; i < FTI_Topo->nbProc; i++) {
         nodeList[i] = -1;
@@ -386,17 +388,17 @@ int FTI_Topology(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
     int res = FTI_Try(FTI_BuildNodeList(FTI_Conf, FTI_Exec, FTI_Topo, nodeList, nameList), "create node list.");
     if (res == FTI_NSCS) {
-        free(nameList);
-        free(nodeList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nameList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nodeList);
 
         return FTI_NSCS;
     }
 
     if (FTI_Exec->reco > 0) {
-        res = FTI_Try(FTI_ReorderNodes(FTI_Conf, FTI_Topo, nodeList, nameList), "reorder nodes.");
+        res = FTI_Try(FTI_ReorderNodes(FTI_Conf, FTI_Exec, FTI_Topo, nodeList, nameList), "reorder nodes.");
         if (res == FTI_NSCS) {
-            free(nameList);
-            free(nodeList);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nameList);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nodeList);
 
             return FTI_NSCS;
         }
@@ -407,15 +409,15 @@ int FTI_Topology(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     if (FTI_Topo->myRank == 0 && FTI_Exec->reco == 0) {
         res = FTI_Try(FTI_SaveTopo(FTI_Conf, FTI_Topo, nameList), "save topology.");
         if (res == FTI_NSCS) {
-            free(nameList);
-            free(nodeList);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nameList);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nodeList);
 
             return FTI_NSCS;
         }
     }
 
-    int *distProcList = talloc(int, FTI_Topo->nbNodes);
-    int *userProcList = talloc(int, FTI_Topo->nbProc - (FTI_Topo->nbNodes * FTI_Topo->nbHeads));
+    int *distProcList =  FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbNodes);
+    int *userProcList =  FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbProc - (FTI_Topo->nbNodes * FTI_Topo->nbHeads));
 
     int mypos = -1, c = 0;
     for (i = 0; i < FTI_Topo->nbProc; i++) {
@@ -428,10 +430,10 @@ int FTI_Topology(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         }
     }
     if (mypos == -1) {
-        free(userProcList);
-        free(distProcList);
-        free(nameList);
-        free(nodeList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, userProcList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, distProcList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nameList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nodeList);
 
         return FTI_NSCS;
     }
@@ -454,18 +456,18 @@ int FTI_Topology(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
     res = FTI_Try(FTI_CreateComms(FTI_Conf, FTI_Exec, FTI_Topo, userProcList, distProcList, nodeList), "create communicators.");
     if (res == FTI_NSCS) {
-        free(userProcList);
-        free(distProcList);
-        free(nameList);
-        free(nodeList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, userProcList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, distProcList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nameList);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nodeList);
 
         return FTI_NSCS;
     }
 
-    free(userProcList);
-    free(distProcList);
-    free(nameList);
-    free(nodeList);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, userProcList);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, distProcList);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nameList);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, nodeList);
 
     return FTI_SCES;
 }

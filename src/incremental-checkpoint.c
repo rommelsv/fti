@@ -224,7 +224,7 @@ int FTI_InitMpiICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   MPI_Offset chunkSize = FTI_Exec->ckptSize;
 
   // collect chunksizes of other ranks
-  MPI_Offset* chunkSizes = talloc(MPI_Offset, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
+  MPI_Offset* chunkSizes = FTI_TypeAlloc(MPI_Offset, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
   MPI_Allgather(&chunkSize, 1, MPI_OFFSET, chunkSizes, 1, MPI_OFFSET, FTI_COMM_WORLD);
 
   // set file offset
@@ -233,7 +233,7 @@ int FTI_InitMpiICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   for (i = 0; i < FTI_Topo->splitRank; i++) {
     offset += chunkSizes[i];
   }
-  free(chunkSizes);
+  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
 
   FTI_Exec->iCPInfo.offset = offset;
 
@@ -436,7 +436,7 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     if (currentdb->update) {
 
       // serialize block meta data and write to file
-      buffer_ser = (char*) malloc ( FTI_dbstructsize );
+      buffer_ser = FTI_TypeAlloc (char, FTI_Exec, AML_MEMORY_SLOW,  FTI_dbstructsize );
       if( buffer_ser == NULL ) {
         snprintf( strerr, FTI_BUFS, "FTI-FF: WriteFTIFF - failed to allocate %d bytes for 'buffer_ser'", FTI_dbstructsize );
         FTI_Print(strerr, FTI_EROR);
@@ -465,7 +465,7 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         close(fd);
         return FTI_NSCS;
       }
-      free( buffer_ser );
+      FTI_Free(FTI_Exec,  AML_MEMORY_SLOW, buffer_ser );
     }
 
     // advance meta data offset
@@ -482,8 +482,8 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       // create datachunk hash
       if(hascontent) {
         dataSize += currentdbvar->chunksize;
-        MD5_Update( &mdContext, (FTI_ADDRPTR) cbasePtr, currentdbvar->chunksize );
-        MD5( (FTI_ADDRPTR) cbasePtr, currentdbvar->chunksize, hashchk );  
+		MD5_Update( &mdContext, (FTI_ADDRPTR) cbasePtr, currentdbvar->chunksize );
+        MD5( (FTI_ADDRPTR) cbasePtr, currentdbvar->chunksize, hashchk );
       }
 
       bool contentUpdate = 
@@ -494,7 +494,7 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       if ( currentdbvar->update || contentUpdate ) {
 
         // serialize data block variable meta data and write to file
-        buffer_ser = (char*) malloc ( FTI_dbvarstructsize );
+        buffer_ser =  FTI_TypeAlloc (char, FTI_Exec, AML_MEMORY_SLOW,  FTI_dbstructsize );
         if( buffer_ser == NULL ) {
           snprintf( strerr, FTI_BUFS, "FTI-FF: WriteFTIFF - failed to allocate %d bytes for 'buffer_ser'", FTI_dbvarstructsize );
           FTI_Print(strerr, FTI_EROR);
@@ -523,7 +523,7 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
           close(fd);
           return FTI_NSCS;
         }
-        free( buffer_ser );
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer_ser );
 
       }
 
@@ -559,7 +559,7 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   }
 
   // serialize file meta data and write to file
-  buffer_ser = (char*) malloc ( FTI_filemetastructsize );
+  buffer_ser = FTI_TypeAlloc (char, FTI_Exec, AML_MEMORY_SLOW,  FTI_dbstructsize );
   if( buffer_ser == NULL ) {
     snprintf( strerr, FTI_BUFS, "FTI-FF: WriteFTIFF - failed to allocate %d bytes for 'buffer_ser'", FTI_filemetastructsize );
     FTI_Print(strerr, FTI_EROR);
@@ -588,7 +588,7 @@ int FTI_InitFtiffICP(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     close(fd);
     return FTI_NSCS;
   }
-  free( buffer_ser );
+  FTI_Free( FTI_Exec, AML_MEMORY_SLOW, buffer_ser );
 
   FTI_Exec->FTIFFMeta.dataSize = dataSize;
   FTI_Exec->FTIFFMeta.dcpSize = 0;

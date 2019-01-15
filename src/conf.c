@@ -184,6 +184,10 @@ int FTI_ReadConf(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     FTI_Conf->stripeFactor = (int)iniparser_getint(ini, "Advanced:lustre_stiping_factor", -1);
     FTI_Conf->stripeOffset = (int)iniparser_getint(ini, "Advanced:lustre_stiping_offset", -1);
 #endif
+#ifdef _USE_AML
+	FTI_Conf->numanodeFast = (int)iniparser_getint(ini, "Advanced:numanodefast", 1);
+	FTI_Conf->numanodeSlow = (int)iniparser_getint(ini, "Advanced:numanodeslow", 0);
+#endif 
 
     // Reading/setting execution metadata
     FTI_Exec->nbVar = 0;
@@ -260,36 +264,45 @@ int FTI_ReadConf(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 int FTI_TestConfig(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
         FTIT_checkpoint* FTI_Ckpt, FTIT_execution* FTI_Exec)
 {
+	char errString[512];
     // Check requirements.
     if (FTI_Topo->nbHeads != 0 && FTI_Topo->nbHeads != 1) {
         FTI_Print("The number of heads needs to be set to 0 or 1.", FTI_WARN);
         return FTI_NSCS;
     }
     if (FTI_Topo->nbProc % FTI_Topo->nodeSize != 0) {
-        FTI_Print("Number of ranks is not a multiple of the node size.", FTI_WARN);
+	snprintf(errString, 512, "Number of ranks (%d) is not a multiple of the node size (%d)",
+		FTI_Topo->nbProc , FTI_Topo->nodeSize);
+        FTI_Print(errString, FTI_WARN);
         return FTI_NSCS;
     }
     if (FTI_Topo->nbNodes % FTI_Topo->groupSize != 0) {
-        FTI_Print("The number of nodes is not multiple of the group size.", FTI_WARN);
+        snprintf(errString, 512, "The number of nodes (%d) is not multiple of the group size (%d)." ,
+		FTI_Topo->nbNodes , FTI_Topo->groupSize );
+        FTI_Print(errString, FTI_WARN);
         return FTI_NSCS;
     }
     // Check if Reed-Salomon and L2 checkpointing is requested.
     int L2req = (FTI_Ckpt[2].ckptIntv > 0) ? 1 : 0;
     int RSreq = (FTI_Ckpt[3].ckptIntv > 0) ? 1 : 0;
     if (FTI_Topo->groupSize <= 2 && (L2req || RSreq)) {
-        FTI_Print("The group size must be bigger than 2", FTI_WARN);
+	snprintf(errString, 512, "The group size (%d) must be bigger than 2", FTI_Topo->groupSize  );
+		FTI_Print(errString, FTI_WARN);
         return FTI_NSCS;
     }
     if (FTI_Topo->groupSize >= 32 && RSreq) {
-        FTI_Print("The group size must be lower than 32", FTI_WARN);
+	snprintf(errString, 512,  "The group size (%d) must be lower than 32",  FTI_Topo->groupSize );
+		 FTI_Print(errString, FTI_WARN);
         return FTI_NSCS;
     }
     if (FTI_Conf->verbosity > 3 || FTI_Conf->verbosity < 1) {
         FTI_Print("Verbosity needs to be set to 1, 2 or 3.", FTI_WARN);
+		 FTI_Print(errString, FTI_WARN);
         return FTI_NSCS;
     }
     if (FTI_Conf->blockSize > (2048 * 1024) || FTI_Conf->blockSize < (1 * 1024)) {
         FTI_Print("Block size needs to be set between 1 and 2048.", FTI_WARN);
+			 FTI_Print(errString, FTI_WARN);
         return FTI_NSCS;
     }
 

@@ -39,7 +39,6 @@
 
 #include "interface.h"
 
-
 #include "ftiff.h"
 
 #ifdef GPUSUPPORT
@@ -63,7 +62,18 @@ static FTIT_execution FTI_Exec;
 static FTIT_topology FTI_Topo;
 
 /** Array of datasets and all their internal information.                  */
+#ifdef _USE_AML
+
+static FTIT_dataset *FTI_Data;
+
+AML_ARENA_JEMALLOC_DECL(arena_slow);
+AML_ARENA_JEMALLOC_DECL(arena_fast);
+
+#else
+
 static FTIT_dataset FTI_Data[FTI_BUFS];
+
+#endif
 
 /** SDC injection model and all the required information.                  */
 static FTIT_injection FTI_Inje;
@@ -128,11 +138,36 @@ int FTI_Init(char* configFile, MPI_Comm globalComm)
     if (res == FTI_NSCS) {
         return FTI_NSCS;
     }
+
+	#ifdef _USE_AML
+	 FTI_Try(FTI_AMLInit(&FTI_Exec, &FTI_Conf, 
+					&arena_fast, 
+					&arena_slow ), 
+				"AML Init" );
+
+	 int i;
+
+	/* rsv-TODO: FAST */
+	FTI_Data = aml_area_malloc(&FTI_Exec.area_fast, 
+						FTI_BUFS * sizeof(FTIT_dataset) );
+	
+	/* rsv-TODO check on error status */
+
+    for (i = 0; i < FTI_BUFS; i++) {
+        FTI_Data[i].id = -1;
+    }
+
+
+	// FTI_Try(FTI_BindSpecifics(FTI_Data, &FTI_Exec.area_fast), 
+	//			"Bind MemRegions" );
+	#endif
+
     res = FTI_Try(FTI_Topology(&FTI_Conf, &FTI_Exec, &FTI_Topo), "build topology.");
     if (res == FTI_NSCS) {
         return FTI_NSCS;
     }
     FTI_Try(FTI_InitGroupsAndTypes(&FTI_Exec), "malloc arrays for groups and types.");
+	 
     FTI_Try(FTI_InitBasicTypes(FTI_Data), "create the basic data types.");
     if (FTI_Topo.myRank == 0) {
         FTI_Try(FTI_UpdateConf(&FTI_Conf, &FTI_Exec, FTI_Exec.reco), "update configuration file.");
@@ -260,7 +295,7 @@ int FTI_InitType(FTIT_type* type, int size)
 #endif
 
     //make a clone of the type in case the user won't store pointer
-    FTI_Exec.FTI_Type[FTI_Exec.nbType] = malloc(sizeof(FTIT_type));
+    FTI_Exec.FTI_Type[FTI_Exec.nbType] = FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIT_type));
     *FTI_Exec.FTI_Type[FTI_Exec.nbType] = *type;
 
     FTI_Exec.nbType = FTI_Exec.nbType + 1;
@@ -339,14 +374,14 @@ int FTI_InitComplexType(FTIT_type* newType, FTIT_complexType* typeDefinition, in
     #endif
 
     //make a clone of the type definition in case the user won't store pointer
-    newType->structure = malloc(sizeof(FTIT_complexType));
+    newType->structure = FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIT_complexType));
     *newType->structure = *typeDefinition;
 
     //append a space for new type
-    FTI_Exec.FTI_Type = realloc(FTI_Exec.FTI_Type, sizeof(FTIT_type*) * (FTI_Exec.nbType + 1));
+    FTI_Exec.FTI_Type = FTI_ReAlloc(&FTI_Exec, AML_MEMORY_SLOW,  FTI_Exec.FTI_Type, sizeof(FTIT_type*) * (FTI_Exec.nbType + 1));
 
     //make a clone of the type in case the user won't store pointer
-    FTI_Exec.FTI_Type[FTI_Exec.nbType] = malloc(sizeof(FTIT_type));
+    FTI_Exec.FTI_Type[FTI_Exec.nbType] = FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIT_type));
     *FTI_Exec.FTI_Type[FTI_Exec.nbType] = *newType;
 
     FTI_Exec.nbType = FTI_Exec.nbType + 1;
@@ -637,7 +672,7 @@ int FTI_InitGroup(FTIT_H5Group* h5group, char* name, FTIT_H5Group* parent)
 #endif
 
     //make a clone of the group in case the user won't store pointer
-    FTI_Exec.H5groups[FTI_Exec.nbGroup] = malloc(sizeof(FTIT_H5Group));
+    FTI_Exec.H5groups[FTI_Exec.nbGroup] = FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIT_H5Group));
     *FTI_Exec.H5groups[FTI_Exec.nbGroup] = *h5group;
 
     //assign a child and increment the childrenNo
@@ -713,7 +748,7 @@ int FTI_Protect(int id, void* ptr, long count, FTIT_type type)
         FTI_Data[i].devicePtr= ptr;
         FTI_Data[i].ptr = NULL; //(void *) malloc (type.size *count);
         if (FTI_Conf.ioMode == FTI_IO_FTIFF || FTI_Conf.ioMode == FTI_IO_HDF5){
-          FTI_Data[i].ptr = (void *) malloc (type.size *count);
+          FTI_Data[i].ptr = (void *) FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, type.size *count);
           if (FTI_Data[i].ptr == NULL){
             FTI_Print("Could Not Allocate Extra Buffer for GPU data\n",FTI_EROR);
             return FTI_NSCS;
@@ -764,7 +799,7 @@ int FTI_Protect(int id, void* ptr, long count, FTIT_type type)
     FTI_Data[FTI_Exec.nbVar].devicePtr= ptr;
     FTI_Data[FTI_Exec.nbVar].ptr = NULL; //(void *) malloc (type.size *count);
     if (FTI_Conf.ioMode == FTI_IO_FTIFF || FTI_Conf.ioMode == FTI_IO_HDF5){
-      FTI_Data[FTI_Exec.nbVar].ptr =  (void *) malloc (type.size *count);
+      FTI_Data[FTI_Exec.nbVar].ptr =  (void *) FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, type.size *count);
       if (FTI_Data[FTI_Exec.nbVar].ptr == NULL){
         FTI_Print("Could Not Allocate Extra Buffer for GPU data\n",FTI_EROR);
         return FTI_NSCS;
@@ -943,7 +978,7 @@ void* FTI_Realloc(int id, void* ptr)
                     FTI_Print(str, FTI_DBUG);
                     return ptr;
                 }
-                ptr = realloc (ptr, FTI_Data[i].size);
+                ptr = FTI_ReAlloc (&FTI_Exec, AML_MEMORY_SLOW, ptr, FTI_Data[i].size);
                 FTI_Data[i].ptr = ptr;
                 FTI_Data[i].count = FTI_Data[i].size / FTI_Data[i].eleSize;
                 FTI_Exec.ckptSize += FTI_Data[i].size - oldSize;
@@ -1168,7 +1203,7 @@ int FTI_Checkpoint(int id, int level)
         MPI_Send(&value, 1, MPI_INT, FTI_Topo.headRank, FTI_Conf.ckptTag, FTI_Exec.globalComm);
         // FTIFF: send meta info to the heads
         if( FTI_Conf.ioMode == FTI_IO_FTIFF && value != FTI_REJW ) {
-            headInfo = malloc(sizeof(FTIFF_headInfo));
+            headInfo = (FTIFF_headInfo *) FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIFF_headInfo));
             headInfo->exists = FTI_Exec.meta[0].exists[0];
             headInfo->nbVar = FTI_Exec.meta[0].nbVar[0];
             headInfo->maxFs = FTI_Exec.meta[0].maxFs[0];
@@ -1183,7 +1218,7 @@ int FTI_Checkpoint(int id, int level)
 	    MPI_Send(headInfo, 1, FTIFF_MpiTypes[FTIFF_HEAD_INFO], FTI_Topo.headRank, FTI_Conf.generalTag, FTI_Exec.globalComm);
             MPI_Send(FTI_Exec.meta[0].varID, headInfo->nbVar, MPI_INT, FTI_Topo.headRank, FTI_Conf.generalTag, FTI_Exec.globalComm);
             MPI_Send(FTI_Exec.meta[0].varSize, headInfo->nbVar, MPI_LONG, FTI_Topo.headRank, FTI_Conf.generalTag, FTI_Exec.globalComm);
-            free(headInfo);
+            FTI_Free(&FTI_Exec, AML_MEMORY_SLOW, headInfo);
         }
 
     }
@@ -1677,7 +1712,7 @@ int FTI_FinalizeICP()
         MPI_Send(&value, 1, MPI_INT, FTI_Topo.headRank, FTI_Conf.ckptTag, FTI_Exec.globalComm);
         // FTIFF: send meta info to the heads
         if( FTI_Conf.ioMode == FTI_IO_FTIFF && value != FTI_REJW ) {
-            headInfo = malloc(sizeof(FTIFF_headInfo));
+            headInfo =(FTIFF_headInfo *) FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, sizeof(FTIFF_headInfo));
             headInfo->exists = FTI_Exec.meta[0].exists[0];
             headInfo->nbVar = FTI_Exec.meta[0].nbVar[0];
             headInfo->maxFs = FTI_Exec.meta[0].maxFs[0];
@@ -1692,7 +1727,7 @@ int FTI_FinalizeICP()
             MPI_Send(headInfo, 1, FTIFF_MpiTypes[FTIFF_HEAD_INFO], FTI_Topo.headRank, FTI_Conf.generalTag, FTI_Exec.globalComm);
             MPI_Send(FTI_Exec.meta[0].varID, headInfo->nbVar, MPI_INT, FTI_Topo.headRank, FTI_Conf.generalTag, FTI_Exec.globalComm);
             MPI_Send(FTI_Exec.meta[0].varSize, headInfo->nbVar, MPI_LONG, FTI_Topo.headRank, FTI_Conf.generalTag, FTI_Exec.globalComm);
-            free(headInfo);
+            FTI_Free(&FTI_Exec, AML_MEMORY_SLOW, headInfo);
         }
 
     }
@@ -1870,7 +1905,7 @@ int FTI_Recover()
 #ifdef GPUSUPPORT
   for (i = 0; i < FTI_Exec.nbVar; i++) {
     if (FTI_Data[i].isDevicePtr){
-      FTI_Data[i].ptr = (void *) malloc(FTI_Data[i].size);
+      FTI_Data[i].ptr = FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, FTI_Data[i].size);
       if (!(FTI_Data[i].ptr)){
         FTI_Print("RECOVER:: Could not Allocate memory on host",FTI_EROR );
         return FTI_NREC;
@@ -1891,7 +1926,7 @@ int FTI_Recover()
       if (res == FTI_NSCS) {
         return FTI_NSCS;
       }
-      free(FTI_Data[i].ptr);
+      FTI_Free(&FTI_Exec, AML_MEMORY_SLOW, FTI_Data[i].ptr);
       FTI_Data[i].ptr = NULL;
     }
   }      
@@ -2124,7 +2159,7 @@ int FTI_Finalize()
     FTI_FreeMeta(&FTI_Exec);
     FTI_FreeTypesAndGroups(&FTI_Exec);
     if( FTI_Conf.ioMode == FTI_IO_FTIFF ) {
-        FTIFF_FreeDbFTIFF(FTI_Exec.lastdb);
+        FTIFF_FreeDbFTIFF(&FTI_Exec, FTI_Exec.lastdb);
     }
     MPI_Barrier(FTI_Exec.globalComm);
     FTI_Print("FTI has been finalized.", FTI_INFO);

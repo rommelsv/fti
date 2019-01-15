@@ -18,6 +18,10 @@
 #include <cuda_runtime_api.h>
 #endif
 
+#ifdef _USE_AML
+#include <aml.h>
+#endif
+
 /*---------------------------------------------------------------------------
   Defines
   ---------------------------------------------------------------------------*/
@@ -388,6 +392,26 @@ extern "C" {
     long*            varSize;            /**< Variable size. [FTI_BUFS]             */
   } FTIT_metadata;
 
+
+
+  /** @typedef    FTIT_Placement
+   *  @brief      Two basic types.
+   *
+   *  As we are testing on KNL Machine nodes with configuration flat,
+   *  Two NUMA nodes are set, with High Bandwith Memory and the 
+   *  standard DRAM memory node. 
+   *
+   *  This enumeration is just to set a switch in the allocation moment
+   *  nothing to elaborated up to the moment. 
+   */
+
+    typedef enum {
+        FTI_PLACEMENT_DEFAULT,
+        AML_MEMORY_SLOW,                /**<  HBM Memory */
+        AML_MEMORY_FAST                  /**<  Standard DRAM Numa node */
+    } FTIT_Placement;
+
+
   /** @typedef    FTIT_execution
    *  @brief      Execution metadata.
    *
@@ -438,6 +462,17 @@ extern "C" {
     cudaEvent_t     cEvents[2];         /**< CUDA event.                    */
     void*           cHostBufs[2];       /**< CUDA host buffer.              */
 #endif
+
+#ifdef _USE_AML
+		struct bitmask  *slow_bitmask;
+		struct bitmask  *fast_bitmask;
+		struct aml_area_linux area_fast_inner_data;
+		struct aml_area area_fast;
+
+		struct aml_area_linux area_slow_inner_data;
+		struct aml_area area_slow;
+#endif
+
   } FTIT_execution;
 
   /** @typedef    FTIT_configuration
@@ -479,6 +514,12 @@ extern "C" {
 #ifdef GPUSUPPORT    
     size_t          cHostBufSize;       /**< Host buffer size for GPU data. */
 #endif
+
+#ifdef _USE_AML
+	int numanodeFast;
+	int numanodeSlow;
+#endif
+
 
   } FTIT_configuration;
 

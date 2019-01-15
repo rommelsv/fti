@@ -83,6 +83,7 @@
 #include <dirent.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdint.h>
 #include <time.h>
 #include <libgen.h>
 
@@ -90,12 +91,63 @@
 #   include "lustreapi.h"
 #endif
 
+#ifdef _USE_AML
+#include <aml.h>
+#endif
+
 /*---------------------------------------------------------------------------
   Defines
   ---------------------------------------------------------------------------*/
 
-/** Malloc macro.                                                          */
-#define talloc(type, num) (type *)malloc(sizeof(type) * (num))
+#define talloc(type, num) (type *)malloc(sizeof(type)*num)
+
+
+#define FTI_DebugFileFunctionLine( constString ) \
+	{\
+	char macroString[128];\
+	snprintf(macroString, 128, constString " %s:%d %s()", __FILE__, __LINE__, __FUNCTION__);\
+	FTI_Print (macroString , FTI_WARN); \
+	}
+
+#define FTI_Free(exec, placement, pointer) \
+	FTI_DebugFileFunctionLine( "Before Free " )\
+	FTI_RealFree(exec, placement, pointer);
+
+#ifdef _USE_AML
+
+#define FTI_Alloc( exec, placement, num) \
+	FTI_RealAlloc(exec, placement, num) ;\
+	FTI_DebugFileFunctionLine( "After Alloc ");
+
+#define FTI_ZeroAlloc(exec, placement, num) \
+	FTI_RealZeroAlloc(exec, placement, num);\
+	FTI_DebugFileFunctionLine( "After ZeroAlloc ");
+
+#define FTI_ReAlloc( exec, placement, ptr, num) \
+	FTI_RealReAlloc(exec, placement, ptr, num );\
+	FTI_DebugFileFunctionLine( "After ReAlloc ");
+
+
+#define FTI_TypeAlloc(type, exec, placement, num) \
+	(type *)FTI_RealAlloc(exec, placement, sizeof(type) * (num)) ;\
+	FTI_DebugFileFunctionLine( "After TypeAlloc ");
+
+#define FTI_TypeZeroAlloc(type, exec, placement, num) \
+	(type *)FTI_RealZeroAlloc(exec, placement, num, sizeof(type));\
+	FTI_DebugFileFunctionLine( "After TypeZeroAlloc ");
+
+#define FTI_TypeReAlloc( type, exec, placement, ptr, num) \
+	(type *)FTI_RealReAlloc(exec, placement, ptr, num * sizeof(type)) ;\
+	FTI_DebugFileFunctionLine( "After TypeReAlloc ");
+
+#else
+
+#define FTI_TypeAlloc(type, exec, placement, num) (type *)FTI_Alloc(exec, FTI_PLACEMENT_DEFAULT, sizeof(type) * (num))
+#define FTI_TypeZeroAlloc(type, exec, placement, num) (type *)FTI_ZeroAlloc(exec, FTI_PLACEMENT_DEFAULT, num, sizeof(type))
+#define FTI_TypeReAlloc( type, exec, placement, ptr, num) (type *)FTI_Realloc(exec, FTI_PLACEMENT_DEFAULT, ptr, num * sizeof(type))
+
+#endif
+
 
 extern int FTI_filemetastructsize;	/**< size of FTIFF_metaInfo in file */
 extern int FTI_dbstructsize;		/**< size of FTIFF_db in file       */
@@ -245,7 +297,7 @@ int FTI_Clean(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
         FTIT_checkpoint* FTI_Ckpt, int level);
 
 int FTI_SaveTopo(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo, char *nameList);
-int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
+int FTI_ReorderNodes(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_topology* FTI_Topo,
         int *nodeList, char *nameList);
 int FTI_BuildNodeList(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         FTIT_topology* FTI_Topo, int *nodeList, char *nameList);
@@ -259,6 +311,25 @@ int FTI_ArchiveL4Ckpt( FTIT_configuration* FTI_Conf, FTIT_execution *FTI_Exec, F
 void FTI_PrintStatus( FTIT_execution *FTI_Exec, FTIT_topology *FTI_Topo, int ID, int source );
 
 #endif
+
+#ifdef  _USE_AML
+
+#define NUMA_NODE_STRING 16
+#define MAX_NODE_STRING 4           /* 0 - 999 Nodes in ASCIIZ */
+
+int FTI_AMLInit(FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf,  
+		struct aml_arena *FTI_ArenaFast, 
+      struct aml_arena *FTI_ArenaSlow);
+
+int FTI_BindSpecifics(FTIT_dataset **FTI_Data, 
+            struct aml_area *FTI_AreaFast);
+//int FTI_BindSpecifics( FTIT_dataset **FTI_Data, FTIT_execution *FTI_Exec );
+#endif
+
+void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t size) ;
+void *FTI_RealZeroAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t many, uint64_t size) ;
+void *FTI_RealReAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, void *pointer, size_t size);
+void  FTI_RealFree(FTIT_execution* FTI_Exec, FTIT_Placement placement, void *pointer);
 
 // DIFFERENTIAL CHECKPOINTING
 

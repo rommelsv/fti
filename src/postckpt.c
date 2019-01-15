@@ -94,7 +94,7 @@ int FTI_SendCkpt(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_ch
         return FTI_NSCS;
     }
 
-    char* buffer = talloc(char, FTI_Conf->blockSize);
+    char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
     long toSend = FTI_Exec->meta[0].fs[postFlag]; //remaining data to send
     while (toSend > 0) {
         int sendSize = (toSend > FTI_Conf->blockSize) ? FTI_Conf->blockSize : toSend;
@@ -103,7 +103,7 @@ int FTI_SendCkpt(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_ch
         if (ferror(lfd)) {
             FTI_Print("Error reading data from L2 ckpt file", FTI_DBUG);
 
-            free(buffer);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
             fclose(lfd);
 
             return FTI_NSCS;
@@ -113,7 +113,7 @@ int FTI_SendCkpt(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_ch
         toSend -= bytes;
     }
 
-    free(buffer);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
     fclose(lfd);
 
     return FTI_SCES;
@@ -152,7 +152,7 @@ int FTI_RecvPtner(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_c
         return FTI_NSCS;
     }
 
-    char* buffer = talloc(char, FTI_Conf->blockSize);
+    char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
     unsigned long toRecv = FTI_Exec->meta[0].pfs[postFlag]; //remaining data to receive
     while (toRecv > 0) {
         int recvSize = (toRecv > FTI_Conf->blockSize) ? FTI_Conf->blockSize : toRecv;
@@ -162,7 +162,7 @@ int FTI_RecvPtner(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_c
         if (ferror(pfd)) {
             FTI_Print("Error writing data to L2 ptner file", FTI_DBUG);
 
-            free(buffer);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
             fclose(pfd);
 
             return FTI_NSCS;
@@ -170,7 +170,7 @@ int FTI_RecvPtner(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_c
         toRecv -= recvSize;
     }
 
-    free(buffer);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer); 
     fclose(pfd);
 
     return FTI_SCES;
@@ -310,10 +310,10 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         }
 
         int bs = FTI_Conf->blockSize;
-        char* myData = talloc(char, bs);
-        char* coding = talloc(char, bs);
-        char* data = talloc(char, 2 * bs);
-        int* matrix = talloc(int, FTI_Topo->groupSize* FTI_Topo->groupSize);
+        char* myData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, bs);
+        char* coding = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, bs);
+        char* data = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, 2*bs);
+        int* matrix = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->groupSize* FTI_Topo->groupSize);
 
         int i;
         for (i = 0; i < FTI_Topo->groupSize; i++) {
@@ -322,7 +322,6 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
                 matrix[i * FTI_Topo->groupSize + j] = galois_single_divide(1, i ^ (FTI_Topo->groupSize + j), FTI_Conf->l3WordSize);
             }
         }
-
 
 
         int remBsize = bs;
@@ -347,10 +346,10 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             if (ferror(lfd)) {
                 FTI_Print("FTI failed to read from L3 ckpt. file.", FTI_EROR);
 
-                free(data);
-                free(matrix);
-                free(coding);
-                free(myData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myData);
                 fclose(lfd);
                 fclose(efd);
 
@@ -427,7 +426,7 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         // FTI-FF append meta data to RS file
         if ( FTI_Conf->ioMode == FTI_IO_FTIFF ) {
 
-            FTIFF_metaInfo *FTIFFMeta = malloc( sizeof( FTIFF_metaInfo) );
+            FTIFF_metaInfo *FTIFFMeta = FTI_TypeAlloc(FTIFF_metaInfo, FTI_Exec, AML_MEMORY_SLOW, sizeof( FTIFF_metaInfo) );
 
             // get timestamp
             struct timespec ntime;
@@ -445,14 +444,14 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             FTIFF_GetHashMetaInfo( FTIFFMeta->myHash, FTIFFMeta );
 
             // serialize data block variable meta data and append to encoded file
-            char* buffer_ser = (char*) malloc ( FTI_filemetastructsize );
+            char* buffer_ser =   FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_filemetastructsize );
             if( buffer_ser == NULL ) {
                 snprintf( str, FTI_BUFS, "FTI_RSenc - failed to allocate %d bytes for 'buffer_ser'", FTI_dbvarstructsize );
                 FTI_Print(str, FTI_EROR);
-                free(data);
-                free(matrix);
-                free(coding);
-                free(myData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myData);
                 fclose(lfd);
                 fclose(efd);
                 errno = 0;
@@ -460,11 +459,11 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             }
             if( FTIFF_SerializeFileMeta( FTIFFMeta, buffer_ser ) != FTI_SCES ) {
                 FTI_Print("FTI_RSenc - failed to serialize 'currentdbvar'", FTI_EROR);
-                free(buffer_ser);
-                free(data);
-                free(matrix);
-                free(coding);
-                free(myData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer_ser);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myData);
                 fclose(lfd);
                 fclose(efd);
                 errno = 0;
@@ -475,22 +474,24 @@ int FTI_RSenc(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
                 snprintf(str, FTI_BUFS, "FTI_RSenc - could not write metadata in file: %s", efn);
                 FTI_Print(str, FTI_EROR);
                 errno=0;
-                free(data);
-                free(matrix);
-                free(coding);
-                free(myData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myData);
                 fclose(lfd);
                 fclose(efd);
                 return FTI_NSCS;
             }
-            free( buffer_ser );
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW,  buffer_ser );
+            // Not sure at all but probable Leak
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, FTIFFMeta );
 
         }
 
-        free(data);
-        free(matrix);
-        free(coding);
-        free(myData);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, myData);
         fclose(lfd);
         fclose(efd);
 
@@ -739,7 +740,7 @@ int FTI_FlushPosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             return FTI_NSCS;
         }
 
-        char *readData = talloc(char, FTI_Conf->transferSize);
+        char *readData = FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->transferSize);
         long bSize = FTI_Conf->transferSize;
         long fs = FTI_Exec->meta[level].fs[proc];
         snprintf(str, FTI_BUFS, "Local file size for proc %d: %ld", proc, fs);
@@ -753,7 +754,7 @@ int FTI_FlushPosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             size_t bytes = fread(readData, sizeof(char), bSize, lfd);
             if (ferror(lfd)) {
                 FTI_Print("L4 cannot read from the ckpt. file.", FTI_EROR);
-                free(readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
                 fclose(lfd);
                 fclose(gfd);
                 return FTI_NSCS;
@@ -762,14 +763,14 @@ int FTI_FlushPosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             fwrite(readData, sizeof(char), bytes, gfd);
             if (ferror(gfd)) {
                 FTI_Print("L4 cannot write to the ckpt. file in the PFS.", FTI_EROR);
-                free(readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
                 fclose(lfd);
                 fclose(gfd);
                 return FTI_NSCS;
             }
             pos = pos + bytes;
         }
-        free(readData);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
         fclose(lfd);
         fclose(gfd);
     }
@@ -846,9 +847,9 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         endProc = 1;
     }
     int nbProc = endProc - startProc;
-    MPI_Offset* localFileSizes = talloc(MPI_Offset, nbProc);
-    char* localFileNames = talloc(char, FTI_BUFS * endProc);
-    int* splitRanks = talloc(int, endProc); //rank of process in FTI_COMM_WORLD
+    MPI_Offset* localFileSizes = FTI_TypeAlloc(MPI_Offset, FTI_Exec, AML_MEMORY_SLOW,  nbProc);
+    char* localFileNames = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS * endProc);
+    int* splitRanks = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, endProc); //rank of process in FTI_COMM_WORLD
     for (proc = startProc; proc < endProc; proc++) {
         if (level == 0) {
             snprintf(&localFileNames[proc * FTI_BUFS], FTI_BUFS, "%s/%s", FTI_Conf->lTmpDir, &FTI_Exec->meta[0].ckptFile[proc * FTI_BUFS]);
@@ -865,9 +866,9 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         localFileSizes[proc - startProc] = FTI_Exec->meta[level].fs[proc]; //[proc - startProc] to get index from 0
     }
 
-    MPI_Offset* allFileSizes = talloc(MPI_Offset, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
+    MPI_Offset* allFileSizes = FTI_TypeAlloc(MPI_Offset, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
     MPI_Allgather(localFileSizes, nbProc, MPI_OFFSET, allFileSizes, nbProc, MPI_OFFSET, FTI_COMM_WORLD);
-    free(localFileSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileSizes);
 
     for (proc = startProc; proc < endProc; proc++) {
         MPI_Offset offset = 0;
@@ -879,13 +880,13 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         FILE* lfd = fopen(&localFileNames[FTI_BUFS * proc], "rb");
         if (lfd == NULL) {
             FTI_Print("L4 cannot open the checkpoint file.", FTI_EROR);
-            free(localFileNames);
-            free(allFileSizes);
-            free(splitRanks);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allFileSizes);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
             return FTI_NSCS;
         }
 
-        char* readData = talloc(char, FTI_Conf->transferSize);
+        char* readData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW,  FTI_Conf->transferSize);
         long bSize = FTI_Conf->transferSize;
         long fs = FTI_Exec->meta[level].fs[proc];
 
@@ -899,10 +900,10 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             size_t bytes = fread(readData, sizeof(char), bSize, lfd);
             if (ferror(lfd)) {
                 FTI_Print("L4 cannot read from the ckpt. file.", FTI_EROR);
-                free(localFileNames);
-                free(allFileSizes);
-                free(splitRanks);
-                free(readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allFileSizes);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW,readData);
                 fclose(lfd);
                 MPI_File_close(&pfh);
                 return FTI_NSCS;
@@ -919,9 +920,9 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
                 MPI_Error_string(res, mpi_err, NULL);
                 snprintf(str, FTI_BUFS, "Failed to write data to PFS during MPIIO Flush [MPI ERROR - %i] %s", res, mpi_err);
                 FTI_Print(str, FTI_EROR);
-                free(localFileNames);
-                free(splitRanks);
-                free(allFileSizes);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allFileSizes);
                 fclose(lfd);
                 MPI_File_close(&pfh);
                 return FTI_NSCS;
@@ -930,12 +931,12 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             offset += bytes;
             pos = pos + bytes;
         }
-        free(readData);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
         fclose(lfd);
     }
-    free(localFileNames);
-    free(allFileSizes);
-    free(splitRanks);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allFileSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
     MPI_File_close(&pfh);
     return FTI_SCES;
 }
@@ -969,9 +970,9 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     }
     int nbProc = endProc - startProc;
 
-    long* localFileSizes = talloc(long, nbProc);
-    char* localFileNames = talloc(char, FTI_BUFS * nbProc);
-    int* splitRanks = talloc(int, nbProc); //rank of process in FTI_COMM_WORLD
+    long* localFileSizes = FTI_TypeAlloc(long, FTI_Exec, AML_MEMORY_SLOW, nbProc);
+    char* localFileNames = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_BUFS * nbProc);
+    int* splitRanks = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW,  nbProc); //rank of process in FTI_COMM_WORLD
     for (proc = startProc; proc < endProc; proc++) {
         // Open local file case 0:
         if (level == 0) {
@@ -998,10 +999,10 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
     int numFiles = 1;
     int nlocaltasks = nbProc;
-    int* file_map = calloc(nbProc, sizeof(int));
-    int* ranks = talloc(int, nbProc);
-    int* rank_map = talloc(int, nbProc);
-    sion_int64* chunkSizes = talloc(sion_int64, nbProc);
+    int* file_map = FTI_TypeZeroAlloc(int, FTI_Exec, AML_MEMORY_SLOW,  nbProc);  
+    int* ranks = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW,  nbProc);
+    int* rank_map = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW,  nbProc);
+    sion_int64* chunkSizes = FTI_TypeAlloc(sion_int64, FTI_Exec, AML_MEMORY_SLOW, nbProc);
     int fsblksize = -1;
     int i;
     for (i = 0; i < nbProc; i++) {
@@ -1013,10 +1014,10 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     if (sid == -1) {
         FTI_Print("Cannot open with sion_paropen_mapped_mpi.", FTI_EROR);
 
-        free(file_map);
-        free(ranks);
-        free(rank_map);
-        free(chunkSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
 
         return FTI_NSCS;
     }
@@ -1025,13 +1026,13 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         FILE* lfd = fopen(&localFileNames[FTI_BUFS * proc], "rb");
         if (lfd == NULL) {
             FTI_Print("L4 cannot open the checkpoint file.", FTI_EROR);
-            free(localFileNames);
-            free(splitRanks);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
             sion_parclose_mapped_mpi(sid);
-            free(file_map);
-            free(ranks);
-            free(rank_map);
-            free(chunkSizes);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
             return FTI_NSCS;
         }
 
@@ -1041,18 +1042,18 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             errno = 0;
             snprintf(str, FTI_BUFS, "SIONlib: unable to set file pointer");
             FTI_Print(str, FTI_EROR);
-            free(localFileNames);
-            free(splitRanks);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
             fclose(lfd);
             sion_parclose_mapped_mpi(sid);
-            free(file_map);
-            free(ranks);
-            free(rank_map);
-            free(chunkSizes);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
             return FTI_NSCS;
         }
 
-        char *readData = talloc(char, FTI_Conf->transferSize);
+        char *readData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->transferSize);
         long bSize = FTI_Conf->transferSize;
         long fs = FTI_Exec->meta[level].fs[proc];
 
@@ -1065,15 +1066,15 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             size_t bytes = fread(readData, sizeof(char), bSize, lfd);
             if (ferror(lfd)) {
                 FTI_Print("L4 cannot read from the ckpt. file.", FTI_EROR);
-                free(localFileNames);
-                free(splitRanks);
-                free(readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
                 fclose(lfd);
                 sion_parclose_mapped_mpi(sid);
-                free(file_map);
-                free(ranks);
-                free(rank_map);
-                free(chunkSizes);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
                 return FTI_NSCS;
             }
 
@@ -1081,27 +1082,27 @@ int FTI_FlushSionlib(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
             if (data_written < 0) {
                 FTI_Print("Sionlib: could not write data", FTI_EROR);
-                free(localFileNames);
-                free(splitRanks);
-                free(readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
                 fclose(lfd);
                 sion_parclose_mapped_mpi(sid);
-                free(file_map);
-                free(ranks);
-                free(rank_map);
-                free(chunkSizes);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
                 return FTI_NSCS;
             }
 
             pos = pos + bytes;
         }
     }
-    free(localFileNames);
-    free(splitRanks);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
     sion_parclose_mapped_mpi(sid);
-    free(file_map);
-    free(ranks);
-    free(rank_map);
-    free(chunkSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, file_map);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, ranks);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, rank_map);
+    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
 }
 #endif

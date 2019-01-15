@@ -17,6 +17,7 @@ else ()
   endif()
 endif()  
 
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
 ## [START] DETERMINE COMPILER MAJOR VERSIONS
 string(REGEX MATCH "[0-9]+" CMAKE_C_COMPILER_VERSION_MAJOR ${CMAKE_C_COMPILER_VERSION} )
@@ -90,6 +91,7 @@ option(ENABLE_TESTS "Enables the generation of tests" ON)
 option(ENABLE_FI_IO "Enables the I/O failure injection mechanism" OFF)
 option(ENABLE_LUSTRE "Enables Lustre Support" OFF)
 option(ENABLE_DOCU "Enables the generation of a Doxygen documentation" OFF)
+option(ENABLE_AML "Enables AML Integration" ON)
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 
@@ -99,11 +101,26 @@ include(FortranCInterface)
 include(CheckFortranCompilerFlag)
 include(CheckCCompilerFlag)
 
+if(ENABLE_AML)
+	message(AUTHOR_WARNING "  **Project is going to be build WITH AML Support")
+
+    # AML_ROOT need to be exported
+    # message(AUTHOR_WARNING "Env Var Main is : $ENV{AML_ROOT}")
+	find_package(NUMA REQUIRED)
+	find_package(AML REQUIRED)
+
+	set(ADD_CFLAGS "${ADD_CFLAGS} ${AML_DEFINITIONS} ")
+	include_directories(${AML_INCLUDE_DIR})
+
+endif()
+
 #check for ZLIB (crc32)
 find_package(ZLIB)
 if(NOT ZLIB_FOUND)
     set(ADD_CFLAGS "${ADD_CFLAGS} -DFTI_NOZLIB")
 endif()
+
+
 
 find_package(MPI REQUIRED)
 if(NOT DEFINED NO_OPENSSL)
@@ -175,6 +192,10 @@ else()
 endif()
 set_target_properties(fti.static fti.shared PROPERTIES POSITION_INDEPENDENT_CODE True)
 
+
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+
+
 append_property(SOURCE ${SRC_FTI}
     PROPERTY COMPILE_FLAGS "${MPI_C_COMPILE_FLAGS}" "${SIONLIB_CFLAGS}" "${ADD_CFLAGS}")
 
@@ -188,6 +209,11 @@ set_property(TARGET fti.static fti.shared
 #http://www.cecalc.ula.ve/documentacion/tutoriales/HPF/pgiws_ug/pgi30u09.htm
 if(NOT "$ENV{COMPILER}" STREQUAL "pgi")
 	find_library(LIBM m DOC "The math library")
+endif()
+
+if(ENABLE_AML)
+	target_link_libraries(fti.static "${AML_LIBRARIES}" "${NUMA_LIBRARIES}")
+	target_link_libraries(fti.shared "${AML_LIBRARIES}" "${NUMA_LIBRARIES}")
 endif()
 
 if(ZLIB_FOUND)
@@ -304,6 +330,11 @@ if(ENABLE_FORTRAN)
 		PROPERTY LINK_FLAGS "${MPI_Fortran_LINK_FLAGS} ${MPI_C_LINK_FLAGS}")
 	set_property(TARGET fti_f90.static fti_f90.shared
 		PROPERTY OUTPUT_NAME fti_f90)
+
+	if(ENABLE_AML)
+		target_link_libraries(fti_f90.shared "${AML_JEMALLOC_LIB}" "${AML_LIB}" "${NUMA_LIBRARIES}")
+		target_link_libraries(fti_f90.shared "${AML_JEMALLOC_LIB}" "${AML_LIB}" "${NUMA_LIBRARIES}" )
+	endif()
 
 	list(APPEND FTI_TARGETS fti_f90.static fti_f90.shared)
 	install(TARGETS fti_f90.static fti_f90.shared
