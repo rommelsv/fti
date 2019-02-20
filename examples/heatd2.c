@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
         int level;
     } cInfo;
     // Define and initialize the datastructure
-    cInfo myCkpt = {1,1};
+    cInfo myCkpt = {1,2};
     // Create a new FTI data type
     FTIT_type ckptInfo;
     // Initialize the new FTI data type

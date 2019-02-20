@@ -68,13 +68,13 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
   long fs = FTI_Exec->meta[3].fs[0];
 
-  char** data = FTI_TypeAlloc(char*, FTI_Exec, AML_MEMORY_SLOW, k);
-  char** coding =  FTI_TypeAlloc(char*, FTI_Exec, AML_MEMORY_SLOW, m);
-  char* dataTmp = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW,  FTI_Conf->blockSize* k);
-  int* dm_ids = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, k);
-  int* decMatrix = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, k* k);
-  int* tmpmat = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, k* k);
-  int* matrix = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_SLOW, k* k);
+  char** data = FTI_TypeAlloc(char*, FTI_Exec, AML_MEMORY_FAST, k);
+  char** coding =  FTI_TypeAlloc(char*, FTI_Exec, AML_MEMORY_FAST, m);
+  char* dataTmp = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST,  FTI_Conf->blockSize* k);
+  int* dm_ids = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_FAST, k);
+  int* decMatrix = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_FAST, k* k);
+  int* tmpmat = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_FAST, k* k);
+  int* matrix = FTI_TypeAlloc(int, FTI_Exec, AML_MEMORY_FAST, k* k);
   int i, j;
   for (i = 0; i < FTI_Topo->groupSize; i++) {
     for (j = 0; j < FTI_Topo->groupSize; j++) {
@@ -82,8 +82,8 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     }
   }
   for (i = 0; i < m; i++) {
-    coding[i] = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
-    data[i] = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
+    coding[i] = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->blockSize);
+    data[i] = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->blockSize);
   }
   j = 0;
   for (i = 0; j < k; i++) {
@@ -112,16 +112,16 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     FTI_Print("Error inversing matrix", FTI_DBUG);
 
     for (i = 0; i < m; i++) {
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
     }
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
     return FTI_NSCS;
   }
@@ -137,17 +137,17 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       FTI_Print("Error with truncate on checkpoint file", FTI_DBUG);
 
       for (i = 0; i < m; i++) {
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
       }
 
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
       return FTI_NSCS;
     }
@@ -170,16 +170,16 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       fclose(efd);
     }
     for (i = 0; i < m; i++) {
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
     }
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
     return FTI_NSCS;
   }
@@ -190,16 +190,16 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     fclose(fd);
 
     for (i = 0; i < m; i++) {
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
     }
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
     return FTI_NSCS;
   }
@@ -230,16 +230,16 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         fclose(efd);
 
         for (i = 0; i < m; i++) {
-          FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-          FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+          FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+          FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
         }
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
         return FTI_NSCS;
       }
@@ -261,16 +261,16 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         fclose(efd);
 
         for (i = 0; i < m; i++) {
-          FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-          FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+          FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+          FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
         }
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
         return FTI_NSCS;
       }
@@ -325,8 +325,8 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   if ( FTI_Conf->ioMode == FTI_IO_FTIFF && erased[FTI_Topo->groupRank] ) {
     char str[FTI_BUFS];
     int ifd = open(fn, O_RDONLY);
-    FTIFF_metaInfo *metaInfo = FTI_TypeAlloc (FTIFF_metaInfo, FTI_Exec, AML_MEMORY_SLOW,   1 );
-    char* buffer_ser =FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_SLOW,  FTI_filemetastructsize );
+    FTIFF_metaInfo *metaInfo = FTI_TypeAlloc (FTIFF_metaInfo, FTI_Exec, AML_MEMORY_FAST,   1 );
+    char* buffer_ser =FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_FAST,  FTI_filemetastructsize );
     if ( buffer_ser == NULL ) {
       FTI_Print("failed to allocate memory for FTI-FF file meta data.", FTI_EROR);
       errno=0;
@@ -348,16 +348,16 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     }
     fs = metaInfo->fs;
     FTI_Exec->meta[3].fs[0] = fs;
-    FTI_Free( FTI_Exec, AML_MEMORY_SLOW, metaInfo );
+    FTI_Free( FTI_Exec, AML_MEMORY_FAST, metaInfo );
     close( ifd );
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer_ser);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer_ser);
   }
 
   // FTI-FF: if encoded file deleted, append meta data to encoded file
   if ( FTI_Conf->ioMode == FTI_IO_FTIFF && erased[FTI_Topo->groupRank + k] ) {
 
     char str[FTI_BUFS];
-    FTIFF_metaInfo *FTIFFMeta = FTI_TypeAlloc (FTIFF_metaInfo, FTI_Exec, AML_MEMORY_SLOW,   1 ); 
+    FTIFF_metaInfo *FTIFFMeta = FTI_TypeAlloc (FTIFF_metaInfo, FTI_Exec, AML_MEMORY_FAST,   1 ); 
 
     // get timestamp
     struct timespec ntime;
@@ -382,7 +382,7 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
 
     // append meta info to RS file
     int ifd = open(efn, O_WRONLY|O_APPEND);
-    char* buffer_ser = FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_SLOW,  FTI_filemetastructsize );
+    char* buffer_ser = FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_FAST,  FTI_filemetastructsize );
     if ( buffer_ser == NULL ) {
       FTI_Print("failed to allocate memory for FTI-FF file meta data.", FTI_EROR);
       errno=0;
@@ -403,38 +403,38 @@ int FTI_Decode(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       return FTI_NSCS;
     }
     close( ifd );
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer_ser);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer_ser);
   }
 
   if (truncate(fn, fs) == -1) {
     FTI_Print("R3 cannot re-truncate checkpoint file.", FTI_WARN);
 
     for (i = 0; i < m; i++) {
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
     }
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
     return FTI_NSCS;
   }
 
   for (i = 0; i < m; i++) {
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding[i]);
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data[i]);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding[i]);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, data[i]);
   }
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, tmpmat);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dm_ids);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, decMatrix);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, matrix);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, data);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, dataTmp);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, coding);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, tmpmat);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, dm_ids);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, decMatrix);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, matrix);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, data);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, dataTmp);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, coding);
 
   return FTI_SCES;
 }
@@ -520,7 +520,7 @@ int FTI_SendCkptFileL2(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     FTI_Print("R2 cannot open the partner ckpt. file.", FTI_WARN);
     return FTI_NSCS;
   }
-  char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
+  char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->blockSize);
 
   while (toSend > 0) {
     int sendSize = (toSend > FTI_Conf->blockSize) ? FTI_Conf->blockSize : toSend;
@@ -530,7 +530,7 @@ int FTI_SendCkptFileL2(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       FTI_Print("Error reading the data from the ckpt. file.", FTI_WARN);
 
       fclose(fileDesc);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer);
 
       return FTI_NSCS;
     }
@@ -539,7 +539,7 @@ int FTI_SendCkptFileL2(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   }
 
   fclose(fileDesc);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer);
 
   return FTI_SCES;
 }
@@ -580,7 +580,7 @@ int FTI_RecvCkptFileL2(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     FTI_Print("R2 cannot open the file.", FTI_WARN);
     return FTI_NSCS;
   }
-  char* buffer =  FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize); 
+  char* buffer =  FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->blockSize); 
 
   while (toRecv > 0) {
     int recvSize = (toRecv > FTI_Conf->blockSize) ? FTI_Conf->blockSize : toRecv;
@@ -599,7 +599,7 @@ int FTI_RecvCkptFileL2(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   }
 
   fclose(fileDesc);
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer); 
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer); 
   return FTI_SCES;
 }
 
@@ -1086,7 +1086,7 @@ int FTI_RecoverL4Mpi(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
   }
 
   long fs = FTI_Exec->meta[4].fs[0];
-  char *readData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->transferSize);
+  char *readData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->transferSize);
   long bSize = FTI_Conf->transferSize;
   long pos = 0;
   // Checkpoint files transfer from PFS
@@ -1105,7 +1105,7 @@ int FTI_RecoverL4Mpi(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
       MPI_Error_string(buf, mpi_err, &reslen);
       snprintf(str, FTI_BUFS, "R4 cannot read from the ckpt. file in the PFS. [MPI ERROR - %i] %s", buf, mpi_err);
       FTI_Print(str, FTI_EROR);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
       MPI_File_close(&pfh);
       fclose(lfd);
       return FTI_NSCS;
@@ -1114,7 +1114,7 @@ int FTI_RecoverL4Mpi(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     fwrite(readData, sizeof(char), bSize, lfd);
     if (ferror(lfd)) {
       FTI_Print("R4 cannot write to the local ckpt. file.", FTI_DBUG);
-      FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+      FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
       fclose(lfd);
       MPI_File_close(&pfh);
       return  FTI_NSCS;
@@ -1124,7 +1124,7 @@ int FTI_RecoverL4Mpi(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     pos = pos + bSize;
   }
 
-  FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+  FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
   fclose(lfd);
 
   if (MPI_File_close(&pfh) != 0) {

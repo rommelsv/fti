@@ -690,21 +690,63 @@ void FTI_CloseGroup(FTIT_H5Group* ftiGroup, FTIT_H5Group** FTI_Group)
 }
 #endif
 
-
 /* TODO-rsv: probably a good idea is to keep a dictionary about the pointer
  * and its corresponding binding, so that in free or realloc there could not 
  * be possibility for a mismatch 
  */
 
+
+void create_file_copy(char *source_path, char *dest_name)  {
+
+	#define STACK_CHUNK_SIZE 4096
+
+	int  status, source_fd, dest_fd;
+	char *src, *dest;
+	int st_size ;
+
+	char stack_buff[STACK_CHUNK_SIZE];
+
+	source_fd = open(source_path, O_RDONLY);
+	dest_fd   = open(dest_name  , O_RDWR|O_CREAT, 0666);
+
+	st_size=0;
+	memset(stack_buff,0,STACK_CHUNK_SIZE);
+
+	while ( read(source_fd, &stack_buff[st_size], sizeof(char)) >0 )  {
+		st_size++;
+		if ( st_size ==  STACK_CHUNK_SIZE) {
+			status = write(dest_fd, &stack_buff[0], sizeof(char)*STACK_CHUNK_SIZE );
+			memset(stack_buff,0,STACK_CHUNK_SIZE);
+			st_size = 0;
+		}
+
+	}
+
+	if ( st_size != 0 ) 
+		status = write(dest_fd, &stack_buff[0], sizeof(char) * STACK_CHUNK_SIZE);
+
+   close(source_fd);
+   close(dest_fd);
+}
+
 void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t size) {
 
     void *allocated_ptr ;
+	static uint64_t times = 0;
+    
+    /*
     char debug_string[128];
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
 
-		snprintf(debug_string, 128, "About to alocate %ld B into %s", 
+    MPI_Get_processor_name(processor_name, &name_len);
+
+    snprintf(debug_string, 128, "About to alocate %ld B into %s", 
 			(uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
 
-		FTI_Print(debug_string, FTI_WARN);
+	FTI_Print(debug_string, FTI_WARN);
+    */
+	
 
     switch (placement) {
 #ifdef _USE_AML
@@ -724,10 +766,17 @@ void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t
     /* TODO-rsv: post processing and check forthe pointer sanity */
 
 	assert(allocated_ptr!=NULL);
-	
+
+    /*	
 	snprintf(debug_string, 128, "Pointer Allocated %p", allocated_ptr);
 	FTI_Print(debug_string, FTI_WARN);
 
+	snprintf(debug_string, 128, "alloc.meminfo0.%s.%ld", processor_name, times++ );
+	create_file_copy("/sys/devices/system/node/node0/meminfo", debug_string);
+
+	snprintf(debug_string, 128, "alloc.meminfo1.%s.%ld", processor_name , times );
+	create_file_copy("/sys/devices/system/node/node1/meminfo", debug_string);
+    */
 
     return allocated_ptr;
 }
@@ -735,14 +784,22 @@ void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t
 
 void *FTI_RealZeroAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t many, uint64_t size) {
 
-   void *allocated_ptr ;
-	
+    void *allocated_ptr ;
+	static uint64_t times = 0;
+
+    /*
+
 	char debug_string[128];
+
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
 
 	snprintf(debug_string, 128, "About to zero allocate %ld B into %s", 
 					(uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
 
 	FTI_Print(debug_string, FTI_WARN);
+    */
 
     switch (placement) {
 #ifdef _USE_AML
@@ -763,21 +820,36 @@ void *FTI_RealZeroAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint
     /* TODO-rsv: post processing and check forthe pointer sanity */
 
 	assert(allocated_ptr != NULL);
+
+    /*
 	snprintf(debug_string, 128, "Pointer Allocated %p", allocated_ptr);
 	FTI_Print(debug_string, FTI_WARN);
+
+	snprintf(debug_string, 128, "zalloc.meminfo0.%s.%ld", processor_name, times++ );
+	create_file_copy("/sys/devices/system/node/node0/meminfo", debug_string);
+
+	snprintf(debug_string, 128, "zalloc.meminfo1.%s.%ld",  processor_name, times);
+	create_file_copy("/sys/devices/system/node/node1/meminfo", debug_string);
+    */
     return allocated_ptr;
 }
 
 void *FTI_RealReAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, void * pointer, size_t size) {
 
     void *allocated_ptr ;
+	static uint64_t times = 0;
 
-		char debug_string[128];
+    /*
+	char debug_string[128];
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
 
+    MPI_Get_processor_name(processor_name, &name_len);
 		snprintf(debug_string, 128, "About to  realloc %p of %ld B into %s", 
 				pointer, (uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
 
-		FTI_Print(debug_string, FTI_WARN);
+	FTI_Print(debug_string, FTI_WARN);
+    */
 
     switch (placement) {
 #ifdef _USE_AML
@@ -797,21 +869,36 @@ void *FTI_RealReAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, void *
     /* TODO-rsv: post processing and check forthe pointer sanity */
 
 	assert(allocated_ptr != NULL);
-
+    /*
 	snprintf(debug_string, 128, "Pointer ReAllocated %p", allocated_ptr);
 	FTI_Print(debug_string, FTI_WARN);
+
+	snprintf(debug_string, 128, "realloc.meminfo0.%s.%ld", processor_name, times++ );
+	create_file_copy("/sys/devices/system/node/node0/meminfo", debug_string);
+
+	snprintf(debug_string, 128, "realloc.meminfo1.%s.%ld", processor_name, times++ );
+	create_file_copy("/sys/devices/system/node/node1/meminfo", debug_string);
+    */
 	return allocated_ptr;
 
 }
 
 void FTI_RealFree(FTIT_execution* FTI_Exec, FTIT_Placement placement, void *pointer){
 
+	static uint64_t times  =0 ;
+
+    /*
 	char debug_string[128];
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+
+    MPI_Get_processor_name(processor_name, &name_len);
 
 	snprintf(debug_string, 128, "About to Free %p from %s", 
 		pointer, placement==AML_MEMORY_FAST? "fast": "slow");
 
 	FTI_Print(debug_string, FTI_WARN);
+    */
 
     switch (placement) {
 #ifdef _USE_AML
@@ -827,6 +914,14 @@ void FTI_RealFree(FTIT_execution* FTI_Exec, FTIT_Placement placement, void *poin
             free( pointer );
             break;
     }
+
+    /*
+	snprintf(debug_string, 128, "free.meminfo0.%s.%ld", processor_name, times++ );
+	create_file_copy("/sys/devices/system/node/node0/meminfo", debug_string);
+
+	snprintf(debug_string, 128, "free.meminfo1.%s.%ld", processor_name, times);
+	create_file_copy("/sys/devices/system/node/node1/meminfo", debug_string);
+    */
 
     /* TODO-rsv: post processing and check forthe pointer sanity */
 }
@@ -853,7 +948,7 @@ int FTI_AMLInit(FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf,
 		henceforth, we can skipp it but need to get better interface. 
 		this is only for knowing that FTI could use AML within 
 	*/
-	/* aml_init();*/
+	//aml_init();
 
 	/* rsv-TODO check on Topos about the NUMA Tree */
 
@@ -861,19 +956,26 @@ int FTI_AMLInit(FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf,
 
 	memset(numanode, 0, NUMA_NODE_STRING);
 	snprintf(numanode, 4, "%d", FTI_Conf->numanodeFast);
+	FTI_Print("The numanode to be configured is ", FTI_INFO);
+	FTI_Print(numanode, FTI_INFO);
 
 	FTI_Exec->slow_bitmask = numa_parse_nodestring_all(numanode);
 
 	memset(numanode, 0, NUMA_NODE_STRING);
 	snprintf(numanode, 4, "%d", FTI_Conf->numanodeSlow);
 
-   FTI_Exec->area_fast.ops = &aml_area_linux_ops;
-	FTI_Exec->area_fast.data =  (struct aml_area_data *)&FTI_Exec->area_fast_inner_data  ;
-
-   FTI_Exec->area_slow.ops = &aml_area_linux_ops;
-	FTI_Exec->area_slow.data =  (struct aml_area_data *)&FTI_Exec->area_slow_inner_data  ;
+	FTI_Print("The numanode to be configured is ", FTI_INFO);
+	FTI_Print(numanode, FTI_INFO);
 
 	FTI_Exec->fast_bitmask = numa_parse_nodestring_all(numanode);
+
+
+    FTI_Exec->area_fast.ops = &aml_area_linux_ops;
+	FTI_Exec->area_fast.data =  (struct aml_area_data *)&FTI_Exec->area_fast_inner_data  ;
+
+    FTI_Exec->area_slow.ops = &aml_area_linux_ops;
+	FTI_Exec->area_slow.data =  (struct aml_area_data *)&FTI_Exec->area_slow_inner_data  ;
+
 
 	/* rsv-TODO check on error types */
 	/* rsv-TODO rewrite assert, support on FTI_TRY()?*/

@@ -501,7 +501,7 @@ int FTI_HandleCkptRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
 
         // init headInfo
         FTIFF_headInfo *headInfo;
-        headInfo = FTI_TypeAlloc(FTIFF_headInfo, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbApprocs);
+        headInfo = FTI_TypeAlloc(FTIFF_headInfo, FTI_Exec, AML_MEMORY_FAST, FTI_Topo->nbApprocs);
 
         int k;
         for (i = 0; i < FTI_Topo->nbApprocs; i++) { // Iterate on the application processes in the node
@@ -528,7 +528,7 @@ int FTI_HandleCkptRequest(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec
             isDcpCnt = 0;
         }
 
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, headInfo);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, headInfo);
 
     }
 
@@ -686,7 +686,7 @@ int FTI_WriteMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     MPI_Offset chunkSize = FTI_Exec->ckptSize;
 
     // collect chunksizes of other ranks
-    MPI_Offset* chunkSizes = FTI_TypeAlloc(MPI_Offset, FTI_Exec, AML_MEMORY_SLOW, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
+    MPI_Offset* chunkSizes = FTI_TypeAlloc(MPI_Offset, FTI_Exec, AML_MEMORY_FAST, FTI_Topo->nbApprocs * FTI_Topo->nbNodes);
     MPI_Allgather(&chunkSize, 1, MPI_OFFSET, chunkSizes, 1, MPI_OFFSET, FTI_COMM_WORLD);
 
     char gfn[FTI_BUFS], ckptFile[FTI_BUFS];
@@ -720,7 +720,7 @@ int FTI_WriteMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         MPI_Error_string(res, mpi_err, &reslen);
         snprintf(str, FTI_BUFS, "unable to create file [MPI ERROR - %i] %s", res, mpi_err);
         FTI_Print(str, FTI_EROR);
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, chunkSizes);
         return FTI_NSCS;
     }
 
@@ -730,7 +730,7 @@ int FTI_WriteMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     for (i = 0; i < FTI_Topo->splitRank; i++) {
         write_info.offset += chunkSizes[i];
     }
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, chunkSizes);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, chunkSizes);
 
     for (i = 0; i < FTI_Exec->nbVar; i++) {
         // determine the type of data pointer

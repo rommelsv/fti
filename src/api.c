@@ -148,8 +148,10 @@ int FTI_Init(char* configFile, MPI_Comm globalComm)
 	 int i;
 
 	/* rsv-TODO: FAST */
-	FTI_Data = aml_area_malloc(&FTI_Exec.area_fast, 
-						FTI_BUFS * sizeof(FTIT_dataset) );
+	//FTI_Data = aml_area_malloc(&FTI_Exec.area_fast, 
+	//					FTI_BUFS * sizeof(FTIT_dataset) );
+
+	FTI_Data = FTI_TypeAlloc(FTIT_dataset, &FTI_Exec, AML_MEMORY_FAST, FTI_BUFS );
 	
 	/* rsv-TODO check on error status */
 

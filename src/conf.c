@@ -271,10 +271,10 @@ int FTI_TestConfig(FTIT_configuration* FTI_Conf, FTIT_topology* FTI_Topo,
         return FTI_NSCS;
     }
     if (FTI_Topo->nbProc % FTI_Topo->nodeSize != 0) {
-	snprintf(errString, 512, "Number of ranks (%d) is not a multiple of the node size (%d)",
+		snprintf(errString, 512, "Number of ranks (%d) is not a multiple of the node size (%d)",
 		FTI_Topo->nbProc , FTI_Topo->nodeSize);
         FTI_Print(errString, FTI_WARN);
-        return FTI_NSCS;
+     //   return FTI_NSCS;
     }
     if (FTI_Topo->nbNodes % FTI_Topo->groupSize != 0) {
         snprintf(errString, 512, "The number of nodes (%d) is not multiple of the group size (%d)." ,

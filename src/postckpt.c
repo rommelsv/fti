@@ -94,7 +94,7 @@ int FTI_SendCkpt(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_ch
         return FTI_NSCS;
     }
 
-    char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
+    char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->blockSize);
     long toSend = FTI_Exec->meta[0].fs[postFlag]; //remaining data to send
     while (toSend > 0) {
         int sendSize = (toSend > FTI_Conf->blockSize) ? FTI_Conf->blockSize : toSend;
@@ -113,7 +113,7 @@ int FTI_SendCkpt(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_ch
         toSend -= bytes;
     }
 
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer);
     fclose(lfd);
 
     return FTI_SCES;
@@ -152,7 +152,7 @@ int FTI_RecvPtner(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_c
         return FTI_NSCS;
     }
 
-    char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->blockSize);
+    char* buffer = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->blockSize);
     unsigned long toRecv = FTI_Exec->meta[0].pfs[postFlag]; //remaining data to receive
     while (toRecv > 0) {
         int recvSize = (toRecv > FTI_Conf->blockSize) ? FTI_Conf->blockSize : toRecv;
@@ -162,7 +162,7 @@ int FTI_RecvPtner(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_c
         if (ferror(pfd)) {
             FTI_Print("Error writing data to L2 ptner file", FTI_DBUG);
 
-            FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer);
+            FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer);
             fclose(pfd);
 
             return FTI_NSCS;
@@ -170,7 +170,7 @@ int FTI_RecvPtner(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec, FTIT_c
         toRecv -= recvSize;
     }
 
-    FTI_Free(FTI_Exec, AML_MEMORY_SLOW, buffer); 
+    FTI_Free(FTI_Exec, AML_MEMORY_FAST, buffer); 
     fclose(pfd);
 
     return FTI_SCES;
@@ -740,7 +740,7 @@ int FTI_FlushPosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             return FTI_NSCS;
         }
 
-        char *readData = FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_SLOW, FTI_Conf->transferSize);
+        char *readData = FTI_TypeAlloc( char, FTI_Exec, AML_MEMORY_FAST, FTI_Conf->transferSize);
         long bSize = FTI_Conf->transferSize;
         long fs = FTI_Exec->meta[level].fs[proc];
         snprintf(str, FTI_BUFS, "Local file size for proc %d: %ld", proc, fs);
@@ -754,7 +754,7 @@ int FTI_FlushPosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             size_t bytes = fread(readData, sizeof(char), bSize, lfd);
             if (ferror(lfd)) {
                 FTI_Print("L4 cannot read from the ckpt. file.", FTI_EROR);
-                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
                 fclose(lfd);
                 fclose(gfd);
                 return FTI_NSCS;
@@ -763,14 +763,14 @@ int FTI_FlushPosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             fwrite(readData, sizeof(char), bytes, gfd);
             if (ferror(gfd)) {
                 FTI_Print("L4 cannot write to the ckpt. file in the PFS.", FTI_EROR);
-                FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
                 fclose(lfd);
                 fclose(gfd);
                 return FTI_NSCS;
             }
             pos = pos + bytes;
         }
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
         fclose(lfd);
         fclose(gfd);
     }
@@ -886,7 +886,7 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             return FTI_NSCS;
         }
 
-        char* readData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_SLOW,  FTI_Conf->transferSize);
+        char* readData = FTI_TypeAlloc(char, FTI_Exec, AML_MEMORY_FAST,  FTI_Conf->transferSize);
         long bSize = FTI_Conf->transferSize;
         long fs = FTI_Exec->meta[level].fs[proc];
 
@@ -903,7 +903,7 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
                 FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);
                 FTI_Free(FTI_Exec, AML_MEMORY_SLOW, allFileSizes);
                 FTI_Free(FTI_Exec, AML_MEMORY_SLOW, splitRanks);
-                FTI_Free(FTI_Exec, AML_MEMORY_SLOW,readData);
+                FTI_Free(FTI_Exec, AML_MEMORY_FAST,readData);
                 fclose(lfd);
                 MPI_File_close(&pfh);
                 return FTI_NSCS;
@@ -931,7 +931,7 @@ int FTI_FlushMPI(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             offset += bytes;
             pos = pos + bytes;
         }
-        FTI_Free(FTI_Exec, AML_MEMORY_SLOW, readData);
+        FTI_Free(FTI_Exec, AML_MEMORY_FAST, readData);
         fclose(lfd);
     }
     FTI_Free(FTI_Exec, AML_MEMORY_SLOW, localFileNames);

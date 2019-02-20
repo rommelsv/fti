@@ -110,35 +110,35 @@
 	}
 
 #define FTI_Free(exec, placement, pointer) \
-	FTI_DebugFileFunctionLine( "Before Free " )\
+	/*FTI_DebugFileFunctionLine( "Before Free " )*/;\
 	FTI_RealFree(exec, placement, pointer);
 
 #ifdef _USE_AML
 
 #define FTI_Alloc( exec, placement, num) \
 	FTI_RealAlloc(exec, placement, num) ;\
-	FTI_DebugFileFunctionLine( "After Alloc ");
+	/*FTI_DebugFileFunctionLine( "After Alloc ")*/;
 
 #define FTI_ZeroAlloc(exec, placement, num) \
 	FTI_RealZeroAlloc(exec, placement, num);\
-	FTI_DebugFileFunctionLine( "After ZeroAlloc ");
+	/*FTI_DebugFileFunctionLine( "After ZeroAlloc ")*/;
 
 #define FTI_ReAlloc( exec, placement, ptr, num) \
 	FTI_RealReAlloc(exec, placement, ptr, num );\
-	FTI_DebugFileFunctionLine( "After ReAlloc ");
+	/*FTI_DebugFileFunctionLine( "After ReAlloc ")*/;
 
 
 #define FTI_TypeAlloc(type, exec, placement, num) \
 	(type *)FTI_RealAlloc(exec, placement, sizeof(type) * (num)) ;\
-	FTI_DebugFileFunctionLine( "After TypeAlloc ");
+	/*FTI_DebugFileFunctionLine( "After TypeAlloc ")*/;
 
 #define FTI_TypeZeroAlloc(type, exec, placement, num) \
 	(type *)FTI_RealZeroAlloc(exec, placement, num, sizeof(type));\
-	FTI_DebugFileFunctionLine( "After TypeZeroAlloc ");
+	/*FTI_DebugFileFunctionLine( "After TypeZeroAlloc ")*/;
 
 #define FTI_TypeReAlloc( type, exec, placement, ptr, num) \
 	(type *)FTI_RealReAlloc(exec, placement, ptr, num * sizeof(type)) ;\
-	FTI_DebugFileFunctionLine( "After TypeReAlloc ");
+	/*FTI_DebugFileFunctionLine( "After TypeReAlloc ")*/;
 
 #else
 
