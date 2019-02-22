@@ -69,6 +69,12 @@ static FTIT_dataset *FTI_Data;
 AML_ARENA_JEMALLOC_DECL(arena_slow);
 AML_ARENA_JEMALLOC_DECL(arena_fast);
 
+/* This is the minimum required for some operations on the internal
+   operations
+
+    for the user, it would be necessary to create external data
+*/
+
 #else
 
 static FTIT_dataset FTI_Data[FTI_BUFS];
@@ -145,23 +151,14 @@ int FTI_Init(char* configFile, MPI_Comm globalComm)
 					&arena_slow ), 
 				"AML Init" );
 
-	 int i;
-
-	/* rsv-TODO: FAST */
-	//FTI_Data = aml_area_malloc(&FTI_Exec.area_fast, 
-	//					FTI_BUFS * sizeof(FTIT_dataset) );
+	int i;
 
 	FTI_Data = FTI_TypeAlloc(FTIT_dataset, &FTI_Exec, AML_MEMORY_FAST, FTI_BUFS );
-	
 	/* rsv-TODO check on error status */
-
     for (i = 0; i < FTI_BUFS; i++) {
         FTI_Data[i].id = -1;
     }
 
-
-	// FTI_Try(FTI_BindSpecifics(FTI_Data, &FTI_Exec.area_fast), 
-	//			"Bind MemRegions" );
 	#endif
 
     res = FTI_Try(FTI_Topology(&FTI_Conf, &FTI_Exec, &FTI_Topo), "build topology.");
@@ -704,6 +701,66 @@ int FTI_RenameGroup(FTIT_H5Group* h5group, char* name) {
 
 /*-------------------------------------------------------------------------*/
 /**
+  @brief      Allocate and store a pointer into the global data structure
+  @param      type           Type of elements in the data structure.
+  @param      count          Number of elements in the data structure. 
+  @param      placement      The node where the variable has to  be allocated
+  @return     integer        The ID of the variable stored
+
+  For different NUMA nodes memroy, allocates 'count' bytes from the mem_node pool. 
+  This is the supported way to opeate with functions between the numa nodes.
+
+ **/
+/*-------------------------------------------------------------------------*/
+int FTI_ProtectedVariable(long count, FTIT_type type, FTIT_Placement placement){
+
+    void * ptr  = NULL; 
+    int index = 0;  
+
+    char dbg[128];
+    snprintf(dbg,128,"About to Protect Variable : %d\xa", FTI_Exec.nbVar);
+
+    FTI_Print(dbg,FTI_INFO); 
+
+    ptr = FTI_RealAlloc(&FTI_Exec, placement, count * sizeof(type) );
+    index = FTI_Exec.nbVar;
+
+    FTI_Protect(FTI_Exec.nbVar, ptr, count, type);
+    FTI_Data[index].isMMReady = 1;
+    FTI_Data[index].placement = placement;
+    FTI_Data[index].size = count * sizeof(type) ;
+    FTI_Data[index].count = count;
+    FTI_Data[index].eleSize = sizeof(type);
+    FTI_Data[index].isDevicePtr = 0;
+    /*TODO: review this type*/
+    FTI_Data[index].type = &type;
+
+    snprintf(dbg,128,"Protected Variable : %d\xa", index);
+
+    FTI_Print(dbg,FTI_INFO); 
+
+    
+    return index;
+}
+
+int FTI_ProtectedFree(int index){
+
+    FTI_Free(&FTI_Exec, FTI_Data[index].placement,  FTI_Data[index].ptr);
+
+    return FTI_SCES;
+
+}
+
+void *FTI_GetProtectedVariable(int index) { 
+
+    if ( FTI_Data[index].ptr ) 
+        return FTI_Data[index].ptr;
+    else 
+        return NULL;
+}
+
+/*-------------------------------------------------------------------------*/
+/**
   @brief      It sets/resets the pointer and type to a protected variable.
   @param      id              ID for searches and update.
   @param      ptr             Pointer to the data structure.
@@ -750,7 +807,7 @@ int FTI_Protect(int id, void* ptr, long count, FTIT_type type)
         FTI_Data[i].devicePtr= ptr;
         FTI_Data[i].ptr = NULL; //(void *) malloc (type.size *count);
         if (FTI_Conf.ioMode == FTI_IO_FTIFF || FTI_Conf.ioMode == FTI_IO_HDF5){
-          FTI_Data[i].ptr = (void *) FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, type.size *count);
+          FTI_Data[i].ptr = (void *) FTI_Alloc(&FTI_Exec, AML_MEMORY_FAST, type.size *count);
           if (FTI_Data[i].ptr == NULL){
             FTI_Print("Could Not Allocate Extra Buffer for GPU data\n",FTI_EROR);
             return FTI_NSCS;
@@ -801,7 +858,7 @@ int FTI_Protect(int id, void* ptr, long count, FTIT_type type)
     FTI_Data[FTI_Exec.nbVar].devicePtr= ptr;
     FTI_Data[FTI_Exec.nbVar].ptr = NULL; //(void *) malloc (type.size *count);
     if (FTI_Conf.ioMode == FTI_IO_FTIFF || FTI_Conf.ioMode == FTI_IO_HDF5){
-      FTI_Data[FTI_Exec.nbVar].ptr =  (void *) FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, type.size *count);
+      FTI_Data[FTI_Exec.nbVar].ptr =  (void *) FTI_Alloc(&FTI_Exec, AML_MEMORY_FAST, type.size *count);
       if (FTI_Data[FTI_Exec.nbVar].ptr == NULL){
         FTI_Print("Could Not Allocate Extra Buffer for GPU data\n",FTI_EROR);
         return FTI_NSCS;
@@ -980,7 +1037,7 @@ void* FTI_Realloc(int id, void* ptr)
                     FTI_Print(str, FTI_DBUG);
                     return ptr;
                 }
-                ptr = FTI_ReAlloc (&FTI_Exec, AML_MEMORY_SLOW, ptr, FTI_Data[i].size);
+                ptr = FTI_ReAlloc (&FTI_Exec, AML_MEMORY_FAST, ptr, FTI_Data[i].size);
                 FTI_Data[i].ptr = ptr;
                 FTI_Data[i].count = FTI_Data[i].size / FTI_Data[i].eleSize;
                 FTI_Exec.ckptSize += FTI_Data[i].size - oldSize;
@@ -1907,7 +1964,7 @@ int FTI_Recover()
 #ifdef GPUSUPPORT
   for (i = 0; i < FTI_Exec.nbVar; i++) {
     if (FTI_Data[i].isDevicePtr){
-      FTI_Data[i].ptr = FTI_Alloc(&FTI_Exec, AML_MEMORY_SLOW, FTI_Data[i].size);
+      FTI_Data[i].ptr = FTI_Alloc(&FTI_Exec, AML_MEMORY_FAST, FTI_Data[i].size);
       if (!(FTI_Data[i].ptr)){
         FTI_Print("RECOVER:: Could not Allocate memory on host",FTI_EROR );
         return FTI_NREC;
@@ -1928,11 +1985,14 @@ int FTI_Recover()
       if (res == FTI_NSCS) {
         return FTI_NSCS;
       }
-      FTI_Free(&FTI_Exec, AML_MEMORY_SLOW, FTI_Data[i].ptr);
+      FTI_Free(&FTI_Exec, AML_MEMORY_FAST, FTI_Data[i].ptr);
       FTI_Data[i].ptr = NULL;
     }
   }      
 #else
+
+    
+
   for (i = 0; i < FTI_Exec.nbVar; i++) {
     fread(FTI_Data[i].ptr, 1, FTI_Data[i].size, fd);
     if (ferror(fd)) {

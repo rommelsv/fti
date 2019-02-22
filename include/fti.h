@@ -354,6 +354,23 @@ extern "C" {
     FTIT_typeField      field[FTI_BUFS];        /**< Fields of the complex type.        */
   } FTIT_complexType;
 
+  /** @typedef    FTIT_Placement
+   *  @brief      Two basic types.
+   *
+   *  As we are testing on KNL Machine nodes with configuration flat,
+   *  Two NUMA nodes are set, with High Bandwith Memory and the 
+   *  standard DRAM memory node. 
+   *
+   *  This enumeration is just to set a switch in the allocation moment
+   *  nothing to elaborated up to the moment. 
+   */
+
+    typedef enum {
+        FTI_PLACEMENT_DEFAULT,
+        AML_MEMORY_SLOW,                /**<  HBM Memory */
+        AML_MEMORY_FAST                  /**<  Standard DRAM Numa node */
+    } FTIT_Placement;
+
   /** @typedef    FTIT_dataset
    *  @brief      Dataset metadata.
    *
@@ -372,7 +389,9 @@ extern "C" {
     FTIT_H5Group*   h5group;            /**< Group of this dataset                          */
     bool            isDevicePtr;        /**<True if this data are stored in a device memory */
     void            *devicePtr;         /**<Pointer to data in the device                   */
-
+    int            isMMReady;         /**<Memory movements Ready? */
+    FTIT_Placement placement;
+    
   } FTIT_dataset;
 
   /** @typedef    FTIT_metadata
@@ -391,26 +410,6 @@ extern "C" {
     int*             varID;              /**< Variable id for size.[FTI_BUFS]       */
     long*            varSize;            /**< Variable size. [FTI_BUFS]             */
   } FTIT_metadata;
-
-
-
-  /** @typedef    FTIT_Placement
-   *  @brief      Two basic types.
-   *
-   *  As we are testing on KNL Machine nodes with configuration flat,
-   *  Two NUMA nodes are set, with High Bandwith Memory and the 
-   *  standard DRAM memory node. 
-   *
-   *  This enumeration is just to set a switch in the allocation moment
-   *  nothing to elaborated up to the moment. 
-   */
-
-    typedef enum {
-        FTI_PLACEMENT_DEFAULT,
-        AML_MEMORY_SLOW,                /**<  HBM Memory */
-        AML_MEMORY_FAST                  /**<  Standard DRAM Numa node */
-    } FTIT_Placement;
-
 
   /** @typedef    FTIT_execution
    *  @brief      Execution metadata.
@@ -464,13 +463,19 @@ extern "C" {
 #endif
 
 #ifdef _USE_AML
-		struct bitmask  *slow_bitmask;
-		struct bitmask  *fast_bitmask;
-		struct aml_area_linux area_fast_inner_data;
-		struct aml_area area_fast;
+	struct bitmask  *slow_bitmask;
+	struct bitmask  *fast_bitmask;
+	struct aml_area_linux area_fast_inner_data;
+	struct aml_area area_fast;
 
-		struct aml_area_linux area_slow_inner_data;
-		struct aml_area area_slow;
+	struct aml_area_linux area_slow_inner_data;
+	struct aml_area area_slow;
+
+    unsigned int    pageSize; 
+
+    
+
+
 #endif
 
   } FTIT_execution;
@@ -634,6 +639,9 @@ extern "C" {
   int FTI_InitGroup(FTIT_H5Group* h5group, char* name, FTIT_H5Group* parent);
   int FTI_RenameGroup(FTIT_H5Group* h5group, char* name);
   int FTI_Protect(int id, void* ptr, long count, FTIT_type type);
+  int FTI_ProtectedVariable(long count, FTIT_type type, FTIT_Placement placement);
+  int FTI_ProtectedFree(int index);
+  void * FTI_GetProtectedVariable(int index);
   int FTI_DefineDataset(int id, int rank, int* dimLength, char* name, FTIT_H5Group* h5group);
   long FTI_GetStoredSize(int id);
   void* FTI_Realloc(int id, void* ptr);

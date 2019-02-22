@@ -126,6 +126,7 @@ int main(int argc, char** argv)
 {
     int fail, rank, nbProcs, nbLines, i, M, arg;
     double wtime, *h, *g, memSize, localerror, globalerror = 1;
+    int index_h, index_g;
 
     if (init(argv, &fail)) {
         return 0;   //verify args
@@ -139,9 +140,19 @@ int main(int argc, char** argv)
 
     arg = 4;
     M = (int)sqrt((double)(arg * 1024.0 * 512.0 * nbProcs)/sizeof(double));
+
     nbLines = (M / nbProcs)+3;
-    h = (double *) malloc(sizeof(double *) * M * nbLines);
-    g = (double *) malloc(sizeof(double *) * M * nbLines);
+
+
+    //h = (double *) malloc(sizeof(double *) * M * nbLines);
+    //g = (double *) malloc(sizeof(double *) * M * nbLines);
+
+    index_g = FTI_ProtectedVariable(M * nbLines, FTI_DBLE, AML_MEMORY_FAST);
+    index_h = FTI_ProtectedVariable(M * nbLines, FTI_DBLE, AML_MEMORY_FAST);
+
+    h = FTI_GetProtectedVariable(index_h);
+    g = FTI_GetProtectedVariable(index_g);
+
     initData(nbLines, M, rank, g);
     memSize = M * nbLines * 2 * sizeof(double) / (1024 * 1024);
 
@@ -152,9 +163,9 @@ int main(int argc, char** argv)
     //}
 
     //adding variables to protect
-    FTI_Protect(0, &i, 1, FTI_INTG);
-    FTI_Protect(1, h, M*nbLines, FTI_DBLE);
-    FTI_Protect(2, g, M*nbLines, FTI_DBLE);
+    //FTI_Protect(0, &i, 1, FTI_INTG);
+    //FTI_Protect(1, h, M*nbLines, FTI_DBLE);
+    //FTI_Protect(2, g, M*nbLines, FTI_DBLE);
     int iTmp = 0;
     wtime = MPI_Wtime();
     for (i = 0; i < ITER_TIMES; i++) {
@@ -162,8 +173,8 @@ int main(int argc, char** argv)
         int checkpointed = FTI_Snapshot();
         if (!(checkpointed != FTI_SCES || checkpointed != FTI_DONE)) {
             printf("%d: Snapshot failed! Returned %d.\n", rank, checkpointed);
-            free(h);
-            free(g);
+            FTI_ProtectedFree(index_h);
+            FTI_ProtectedFree(index_g);
             FTI_Finalize();
             MPI_Finalize();
             return 1;
@@ -188,7 +199,12 @@ int main(int argc, char** argv)
             printf("%d: Stoped at i = %d.\n", rank, i);
             break;
         }
+    
+    FTI_Checkpoint(i,2);
+    
     }
+
+    sleep(60);
     if (rank == 0) {
         printf("Execution finished in %lf seconds. Error = %f\n", MPI_Wtime() - wtime, globalerror);
     }
@@ -198,8 +214,11 @@ int main(int argc, char** argv)
         rtn = verify(globalerror, rank);
     }
 
-    free(h);
-    free(g);
+    FTI_ProtectedFree(index_g);
+    FTI_ProtectedFree(index_h);
+    
+    //free(h);
+    //free(g);
 
     FTI_Finalize();
     MPI_Finalize();

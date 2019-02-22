@@ -586,6 +586,7 @@ int FTI_WritePosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
         snprintf(fn, FTI_BUFS, "%s/%s", FTI_Conf->lTmpDir, FTI_Exec->meta[0].ckptFile);
     }
 
+
     // open task local ckpt file
     FILE* fd = fopen(fn, "wb");
     if (fd == NULL) {
@@ -598,6 +599,9 @@ int FTI_WritePosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
     // write data into ckpt file
     int i;
 
+#ifdef _USE_AML
+    res = write_posix_aligned(FTI_Exec, FTI_Data, fd);
+#else
     for (i = 0; i < FTI_Exec->nbVar; i++) {
         clearerr(fd);
         if (!ferror(fd)) {
@@ -624,7 +628,6 @@ int FTI_WritePosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             }
 #endif            
         }
-
         if (ferror(fd)) {
             char error_msg[FTI_BUFS];
             error_msg[0] = 0;
@@ -635,6 +638,7 @@ int FTI_WritePosix(FTIT_configuration* FTI_Conf, FTIT_execution* FTI_Exec,
             return FTI_NSCS;
         }
     }
+#endif
 
     // close file
     if (fclose(fd) != 0) {

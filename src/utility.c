@@ -5,6 +5,7 @@
 #include "api_cuda.h"
 #include "utility.h"
 
+
 int write_posix(void *src, size_t size, void *opaque)
 {
   FILE *fd = (FILE *)opaque;
@@ -87,4 +88,48 @@ int copyDataFromDevive(FTIT_execution* FTI_Exec, FTIT_dataset* FTI_Data){
 #endif
   return FTI_SCES;
 }
+
+/* TODO: This is only a prototype, where the only "chunk" is the pageSize
+   Ideally, we can use FTI_Data->dimention, to get the correct tiling scheme
+   ether on 1D or 2D
+*/
+int write_posix_aligned(FTIT_execution * FTI_Exec, FTIT_dataset* FTI_Data, int fd){
+#ifdef _USE_AML
+    AML_DMA_LINUX_SEQ_DECL(dma);
+    AML_TILING_1D_DECL(tiling);
+    
+    struct aml_area_linux_mmap_data mmapconfig;
+    void * ptr; 
+    int writtenBytes, i;
+    
+    aml_tiling_init(&tiling, AML_TILING_TYPE_1D, 
+                        FTI_Exec->pageSize, FTI_Exec->pageSize );
+    
+    aml_area_linux_mmap_fd_init(&mmapconfig, fd, 0) ;
+    ptr = aml_area_linux_mmap_generic(&mmapconfig, NULL, FTI_Exec->ckptSize);
+    
+    
+    for( writtenBytes = 0, i = 0; i < FTI_Exec->nbVar; i++){
+        void * ptrPosition = ptr + writtenBytes;
+        int nrequests = FTI_Data[i].size / FTI_Exec->pageSize;
+
+        aml_dma_linux_seq_init(&dma, nrequests);
+    
+        aml_dma_copy(&dma, 
+                        &tiling, ptrPosition, 0,  
+                        &tiling, FTI_Data[i].ptr, FTI_Data[i].size);
+
+        writtenBytes +=  FTI_Data[i].size;
+        aml_dma_linux_seq_destroy(&dma);
+    }
+    
+    
+    aml_tiling_destroy(&tiling, AML_TILING_TYPE_1D);
+    munmap(ptr, FTI_Exec->ckptSize);
+
+#endif
+
+  return FTI_SCES;
+}
+
 

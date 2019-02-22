@@ -104,6 +104,8 @@ int main(int argc, char *argv[])
     double wtime, *h, *g, *grid, globalerror = 1;
     char fn[32];
 
+    int index_h, index_g, index_grid;
+
     MPI_Init(&argc, &argv);
     FTI_Init(argv[1], MPI_COMM_WORLD);
     MPI_Comm_size(FTI_COMM_WORLD, &nbProcs);
@@ -112,9 +114,19 @@ int main(int argc, char *argv[])
     M = GRIDSIZE;
     N = GRIDSIZE;
     nbLines = (N / nbProcs)+3;
-    h = (double *) malloc(sizeof(double *) * M * nbLines);
-    g = (double *) malloc(sizeof(double *) * M * nbLines);
-    grid = (double *) malloc(sizeof(double *) * M * (nbLines-2) * nbProcs);
+
+    //h = (double *) malloc(sizeof(double *) * M * nbLines);
+    //g = (double *) malloc(sizeof(double *) * M * nbLines);
+    //grid = (double *) malloc(sizeof(double *) * M * (nbLines-2) * nbProcs);
+
+    index_h = FTI_ProtectedVariable(M * nbLines, FTI_DBLE, AML_MEMORY_FAST);
+    index_g = FTI_ProtectedVariable(M * nbLines, FTI_DBLE, AML_MEMORY_FAST);
+    index_grid =  FTI_ProtectedVariable(M * (nbLines-2)* nbProcs, FTI_DBLE, AML_MEMORY_SLOW);
+
+    h = FTI_GetProtectedVariable(index_h);
+    g = FTI_GetProtectedVariable(index_g);
+    grid = FTI_GetProtectedVariable(index_grid);
+
     initData(nbLines, M, rank, g);
     if (rank == 0) {
         printf("Data initialized. Global grid size is %d x %d.\n", M, (nbLines-2)*nbProcs);
@@ -132,14 +144,15 @@ int main(int argc, char *argv[])
     // Initialize the new FTI data type
     FTI_InitType(&ckptInfo, 2*sizeof(int));
 
-    FTI_Protect(0, &i, 1, FTI_INTG);
-    FTI_Protect(1, &myCkpt, 1, ckptInfo);
-    FTI_Protect(2, h, M*nbLines, FTI_DBLE);
-    FTI_Protect(3, g, M*nbLines, FTI_DBLE);
+    //FTI_Protect(0, &i, 1, FTI_INTG);
+    //FTI_Protect(1, &myCkpt, 1, ckptInfo);
+    //FTI_Protect(2, h, M*nbLines, FTI_DBLE);
+    //FTI_Protect(3, g, M*nbLines, FTI_DBLE);
 
     MPI_Barrier(FTI_COMM_WORLD);
     wtime = MPI_Wtime();
     for(i = 0; i < ITER_TIMES; i++) { // Check execution status
+        printf("new iteration...\xa");
         if (FTI_Status() != 0) {
             res = FTI_Recover();
             if (res != 0) {
@@ -147,16 +160,19 @@ int main(int argc, char *argv[])
             }
             else { // Update ckpt. id & level
                 myCkpt.level = (myCkpt.level+1)%5; myCkpt.id++;
+                printf("Chkpt struct %d.%d\xa", myCkpt.level, myCkpt.id);
             }
         }
         else {
             if (((i+1)%ITER_OUT) == 0) { // Checkpoint every ITER_OUT steps
+                printf("About to checkpoint....\xa");
                 res = FTI_Checkpoint(myCkpt.id, myCkpt.level); // Ckpt ID 5 is ignored because level = 0
                 if (res == 0) {
                     myCkpt.level = (myCkpt.level+1)%5; myCkpt.id++;
                 } // Update ckpt. id & level
             }
         }
+        printf("About to do work....\xa");
         globalerror = doWork(nbProcs, rank, M, nbLines, g, h);
         if ((i%ITER_OUT) == 0) {
             if (rank == 0) {
@@ -176,9 +192,13 @@ int main(int argc, char *argv[])
         printf("Execution finished in %lf seconds.\n", MPI_Wtime() - wtime);
     }
 
-    free(h);
-    free(g);
-    free(grid);
+    //free(h);
+    //free(g);
+    //free(grid);
+
+    FTI_ProtectedFree(index_h);
+    FTI_ProtectedFree(index_g);
+    FTI_ProtectedFree(index_grid);
 
     FTI_Finalize();
     MPI_Finalize();

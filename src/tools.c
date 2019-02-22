@@ -40,6 +40,8 @@
 #include <dirent.h>
 #include "api_cuda.h"
 
+#include <sys/mman.h>
+
 int FTI_filemetastructsize;		        /**< size of FTIFF_db struct in file    */
 int FTI_dbstructsize;		        /**< size of FTIFF_db struct in file    */
 int FTI_dbvarstructsize;		        /**< size of FTIFF_db struct in file    */
@@ -733,7 +735,7 @@ void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t
 
     void *allocated_ptr ;
 	static uint64_t times = 0;
-    
+
     /*
     char debug_string[128];
     char processor_name[MPI_MAX_PROCESSOR_NAME];
@@ -741,12 +743,11 @@ void *FTI_RealAlloc(FTIT_execution* FTI_Exec, FTIT_Placement placement, uint64_t
 
     MPI_Get_processor_name(processor_name, &name_len);
 
-    snprintf(debug_string, 128, "About to alocate %ld B into %s", 
+    snprintf(debug_string, 128, "About to allocate %ld B into %s", 
 			(uint64_t) size, (placement==AML_MEMORY_FAST)? "fast": "slow");
 
 	FTI_Print(debug_string, FTI_WARN);
-    */
-	
+	*/
 
     switch (placement) {
 #ifdef _USE_AML
@@ -947,7 +948,7 @@ int FTI_AMLInit(FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf,
 	/* rsv-TODO: up to the moment aml_init is not binded to anything, 
 		henceforth, we can skipp it but need to get better interface. 
 		this is only for knowing that FTI could use AML within 
-	*/
+        */
 	//aml_init();
 
 	/* rsv-TODO check on Topos about the NUMA Tree */
@@ -983,7 +984,7 @@ int FTI_AMLInit(FTIT_execution *FTI_Exec, FTIT_configuration *FTI_Conf,
 assert(
 	!aml_arena_jemalloc_init(
 		FTI_ArenaSlow,
-		AML_ARENA_JEMALLOC_TYPE_REGULAR));	
+		AML_ARENA_JEMALLOC_TYPE_ALIGNED));	
 
 assert(
 	!aml_area_linux_init(
@@ -997,7 +998,7 @@ assert(
 assert(
 	!aml_arena_jemalloc_init(
 		FTI_ArenaFast,
-		AML_ARENA_JEMALLOC_TYPE_REGULAR));	
+		AML_ARENA_JEMALLOC_TYPE_ALIGNED));	
 
 assert(
 	!aml_area_linux_init(
@@ -1006,6 +1007,9 @@ assert(
 		AML_AREA_LINUX_MBIND_TYPE_REGULAR,	
 		AML_AREA_LINUX_MMAP_TYPE_ANONYMOUS, 
 		FTI_ArenaFast, MPOL_BIND, &FTI_Exec->fast_bitmask));
+
+
+    FTI_Exec->pageSize = sysconf(_SC_PAGE_SIZE);
 
 
 	return FTI_SCES;
